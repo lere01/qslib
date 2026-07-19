@@ -404,6 +404,26 @@ impl RectangularGeometry {
         self.site_count
     }
 
+    /// Return the horizontal extent.
+    pub const fn lx(&self) -> usize {
+        self.lx
+    }
+
+    /// Return the vertical extent.
+    pub const fn ly(&self) -> usize {
+        self.ly
+    }
+
+    /// Return the horizontal boundary condition.
+    pub const fn boundary_x(&self) -> Boundary {
+        self.boundary_x
+    }
+
+    /// Return the vertical boundary condition.
+    pub const fn boundary_y(&self) -> Boundary {
+        self.boundary_y
+    }
+
     /// Return the selected embedding.
     pub const fn kind(&self) -> LatticeKind {
         self.kind

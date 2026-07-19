@@ -96,10 +96,15 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
 - Observation: the exact staged M3 tree at commit `d0d68f8` was reconstructed
   under `/private/tmp/qslib-m3-candidate.*` and its complete workspace test
   suite passed on Rust 1.85 without relying on the working tree.
-- [ ] In progress: Milestone 4 implements operators, Hamiltonians, and canonical
-  model constructors.
-- [ ] Complete Milestone 5: implement symmetry groups, actions, sectors, and
-  projection utilities.
+- [x] (2026-07-19) Completed Milestone 4: implemented operators, Hamiltonians,
+  and canonical model constructors. Architect closure review approved; the
+  complete workspace quality suite passes.
+- [x] (2026-07-19) Completed Milestone 5: implemented symmetry groups, actions,
+  orbit and sector projection utilities, gauges, and resolved-model symmetry
+  validation. Architect closure review approved; the complete workspace
+  quality suite passes.
+- [ ] In progress: Milestone 6 implements exact matrices, eigensolvers, ground-
+  state search, exact thermodynamics, and exact evolution.
 - [ ] Complete Milestone 6: implement exact matrices, eigensolvers, ground-state
   search, exact thermodynamics, and exact evolution.
 - [ ] Complete Milestone 7: implement observables, online statistics,
@@ -741,7 +746,28 @@ Write group-law, permutation, projector-idempotence, character, orbit,
 Hamiltonian-commutator, and legacy-adapter tests first. The gate passes when
 small exact spectra split into symmetry sectors whose combined multiplicities
 match the unrestricted spectrum and rejected actions explain which term breaks
-the symmetry.
+the symmetry. The exact-spectrum multiplicity check depends on the M6 exact
+matrix/eigensolver layer; M5 must provide the group, orbit, projection, and
+sector-index contracts that M6 consumes, while M5 tests cover group-law and
+projector invariants independently.
+
+Execution record (2026-07-19): the M5 acceptance tests were added before
+production implementation. The focused Rust 1.85 run failed at compilation
+with unresolved permutation, translation, finite-group, spin-inversion,
+character, and interaction-symmetry APIs, which is the intended red state.
+
+Implementation record (2026-07-19): M5 symmetry primitives are now present in
+`qslib-core`. Gather-direction permutations validate bijections, composition,
+inverse, state action, Pauli support mapping, and simple-bond mapping. Geometry
+builders cover translations, finite translation groups, rectangle and square
+point groups, with explicit open-boundary rejection and periodic wrapping.
+Spin inversion, deterministic orbit representatives, trivial-character
+projection, and resolved weighted-interaction symmetry checks are covered by
+independent tests. Characters are bound to the canonical ordered permutation
+set used for validation, and projection rejects reuse with another group even
+when the group order matches. Architect closure review approved M5 after the
+focused symmetry target passed all 11 tests and the workspace quality suite
+passed with formatting, warnings-denied Clippy, and warnings-denied rustdoc.
 
 ### Milestone 6: exact ground states and dynamics
 

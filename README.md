@@ -51,6 +51,8 @@ couplings, and disorder provenance, see the
 [geometry and interactions guide](docs/geometry-interactions.md).
 For operator action, Hamiltonian signs, basis rotations, and model constructors,
 see the [operators and models guide](docs/operators-models.md).
+For gather-direction site permutations, lattice groups, spin inversion, and
+projection, see the [symmetry guide](docs/symmetry.md).
 
 ## Project policies
 

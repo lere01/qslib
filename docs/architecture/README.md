@@ -105,6 +105,12 @@ remain independent of exact, variational, thermal, or sampling algorithms. See
 the [`../operators-models.md`](../operators-models.md) guide for physical sign
 and basis conventions.
 
+Milestone 5 adds explicit gather-direction permutations, generated lattice
+groups, spin inversion, orbit representatives, character projection, and
+resolved-interaction symmetry validation. These actions remain independent of
+exact-sector storage and solver algorithms; see the [`../symmetry.md`](../symmetry.md)
+guide.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:

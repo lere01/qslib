@@ -15,6 +15,7 @@ mod interactions;
 mod models;
 mod operators;
 mod scalar;
+mod symmetry;
 
 pub use basis::{
     BasisBit, BasisState, BasisStateView, FullBasis, PackedState, SectorBasis, WordWidth,
@@ -34,3 +35,9 @@ pub use models::{
 };
 pub use operators::{Hamiltonian, OperatorError, Pauli, PauliString};
 pub use scalar::{Complex64, Real, ensure_finite};
+pub use symmetry::{
+    DiagonalGauge, FiniteGroup, Permutation, SpinInversion, SymmetryCharacter, SymmetryError,
+    is_interaction_symmetry, legacy_x_major_permutation, rectangle_point_group, square_point_group,
+    sublattice_gauge, translation, translation_group, validate_model_symmetry,
+    validate_spin_inversion,
+};
