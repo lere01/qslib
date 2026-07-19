@@ -16,3 +16,7 @@ name = "qslib_sse"
 qslib-core = { package = "qslib-quantum-core", version = "0.1.0", path = "../qslib-core" }
 rand_chacha.workspace = true
 rand_core.workspace = true
+
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true

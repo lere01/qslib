@@ -120,9 +120,12 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   stage seeds, accepted-only observations, overflow-safe commits, and complete
   checkpoint metadata/configuration validation. Architect closure review
   approved; the complete workspace quality suite passes.
-- [ ] In progress: Milestone 10 migrates and reconciles the supported SSE
-  algorithms.
-- [ ] Complete Milestone 10: migrate and reconcile the supported SSE algorithms.
+- [x] (2026-07-19) Completed Milestone 10: migrated and reconciled the supported
+  SSE algorithms on canonical qslib types. Architect review gates cover
+  versioned chain seeds, explicit legacy adapters, independent-chain thermal
+  confidence, worker-count determinism, cutoff safety, and parity fixtures.
+- [ ] In progress: Milestone 11 implements versioned configuration, artifacts,
+  and checkpoints.
 - [ ] Complete Milestone 11: implement versioned configuration, artifacts, and
   checkpoint schemas.
 - [ ] Complete Milestone 12: implement Python bindings and ncli parity adapters.
@@ -920,6 +923,18 @@ tractable, operator-string growth tests, thread-count determinism, and
 statistical regression tests before retiring old paths. The gate passes when
 the qslib SSE examples reproduce the standalone crate's validated physics after
 explicit conversion and unsupported sign structures fail clearly.
+
+Implementation record (2026-07-19): `qslib-quantum-sse` now uses canonical
+`BasisBit` states, explicit per-bond and per-site coefficients, checked TFIM and
+Rydberg `WeightedInteraction` adapters, trace-closed propagation, diagonal and
+off-diagonal pair updates, and boundary-state updates. Operator cutoffs grow
+only during thermalization and fail explicitly if exhausted during measurement.
+The shared ADR-0003 BLAKE3 framing derives 32-byte `sse_chain` seeds for
+ChaCha20 streams; the historical SplitMix seed remains an explicitly named
+legacy adapter. Independent logical chains are reproducible across worker
+counts. A provenance-labelled parity fixture, exact one-site Rydberg and
+two-site Ising thermal gates, and 23 SSE conformance tests pass with full
+workspace tests, Clippy, rustdoc, formatting, and diff checks.
 
 ### Milestone 11: configuration, artifacts, and checkpoints
 

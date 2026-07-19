@@ -183,6 +183,8 @@ dependencies = [
  "qslib-quantum-core",
  "rand_chacha",
  "rand_core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

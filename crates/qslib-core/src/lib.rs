@@ -14,6 +14,7 @@ mod identifiers;
 mod interactions;
 mod models;
 mod operators;
+mod randomness;
 mod scalar;
 mod symmetry;
 
@@ -34,6 +35,7 @@ pub use models::{
     ModelError, ModelSpecification, ResolvedModel, heisenberg, j1j2, j1j2_disordered, rydberg, tfim,
 };
 pub use operators::{Hamiltonian, OperatorError, Pauli, PauliString};
+pub use randomness::{QSLIB_SEED_SCHEME, derive_seed, expand_master_seed};
 pub use scalar::{Complex64, Real, ensure_finite};
 pub use symmetry::{
     DiagonalGauge, FiniteGroup, Permutation, SpinInversion, SymmetryCharacter, SymmetryError,

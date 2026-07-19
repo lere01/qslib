@@ -33,11 +33,17 @@ impl ThermodynamicAccumulator {
         let mean = self.sum / count;
         let second = self.sum_squared / count;
         let energy = energy_shift - mean / beta;
+        let variance = if self.samples > 1 {
+            ((second - mean * mean) * count / (count - 1.0)).max(0.0)
+        } else {
+            0.0
+        };
         let heat_capacity = second - mean * mean - mean;
         Some(ThermodynamicResults {
             samples: self.samples,
             mean_expansion_order: mean,
             energy,
+            energy_standard_error: variance.sqrt() / (count.sqrt() * beta),
             energy_per_site: energy / num_sites as f64,
             heat_capacity,
             heat_capacity_per_site: heat_capacity / num_sites as f64,
@@ -53,6 +59,11 @@ pub struct ThermodynamicResults {
     pub mean_expansion_order: f64,
     /// Total physical energy.
     pub energy: f64,
+    /// Naive independent-sample standard error of the energy estimator.
+    ///
+    /// This does not correct for autocorrelation; independent logical chains
+    /// should be combined when a confidence interval is required.
+    pub energy_standard_error: f64,
     /// Energy per site.
     pub energy_per_site: f64,
     /// Heat capacity estimator.

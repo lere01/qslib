@@ -135,8 +135,10 @@ evolution metadata. See the [`../evolution.md`](../evolution.md) contract.
 
 Milestone 10 is migrating the standalone SSE backend onto canonical qslib
 bits, explicit weighted local terms, trace-checked operator strings, and
-sign-safe thermodynamic estimators. Legacy model adapters remain model-aware;
-the ambiguous standalone `Spin` meaning is not part of qslib. See the
+sign-safe thermodynamic estimators. SSE chains use the shared ADR-0003
+versioned BLAKE3/ChaCha20 seed derivation and expose worker-count-invariant
+logical chain results. Legacy model adapters remain model-aware; the
+ambiguous standalone `Spin` meaning is not part of qslib. See the
 [`../sse.md`](../sse.md) contract.
 
 ## Development architecture

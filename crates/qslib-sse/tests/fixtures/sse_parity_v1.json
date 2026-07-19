@@ -1,0 +1,54 @@
+{
+  "schema": "qslib-sse-parity-v1",
+  "provenance": {
+    "source": "standalone-sse/src/hamiltonian.rs and standalone-sse/src/sse/parallel.rs",
+    "revision": "f6b7650e7f2af230a77ee48a0613d388448bea29",
+    "capture": "2026-07-19",
+    "seed_scheme": "legacy-splitmix-u64",
+    "command": "cargo +1.85.0 run --quiet -- run --config configs/tfim-chain.yaml --output /private/tmp/qslib-sse-parity-capture --force --quiet",
+    "config": "sse/configs/tfim-chain.yaml"
+  },
+  "legacy_chain_seed": 6904877152625194467,
+  "sweep_comparison_policy": "compare update counters by named category and require nonzero accepted updates; do not require exact counts because qslib and standalone use different proposal kernels",
+  "standalone_capture": {
+    "chains": 4,
+    "threads": 4,
+    "master_seed": 24301,
+    "thermalization_sweeps": 1000,
+    "measurement_sweeps": 10000,
+    "energy_per_site": -1.0630828125,
+    "chain_standard_error": 0.0022881635749160936,
+    "chain_seeds": [
+      11641637725690733631,
+      5659161736914266567,
+      13899076551742739803,
+      12461984621309979494
+    ],
+    "energy_per_chain": [-1.060125, -1.06928125, -1.06374375, -1.05918125],
+    "insertions_accepted": [389514, 390732, 389781, 388474],
+    "removals_accepted": [389506, 390740, 389774, 388471],
+    "off_diagonal_proposals_accepted": [10000, 10000, 10000, 10000]
+  },
+  "tfim": {
+    "num_sites": 2,
+    "bond": [0, 1],
+    "coupling": 1.25,
+    "field": 0.75,
+    "energy_shift": 2.75,
+    "term_count": 5,
+    "propagation": {
+      "initial_bits": [0, 0],
+      "operator": ["diagonal", 0],
+      "final_bits": [0, 0],
+      "log_weight": 0.9162907318741551
+    }
+  },
+  "rydberg": {
+    "num_sites": 2,
+    "detunings": [0.5, -0.25],
+    "interaction": [0, 1, 2.0],
+    "omega": 0.6,
+    "energy_shift": 2.85,
+    "term_count": 7
+  }
+}

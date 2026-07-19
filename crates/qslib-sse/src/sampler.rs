@@ -6,7 +6,9 @@ use crate::{
     BasisSseState, Operator, SseModel, SseModelError, ThermodynamicAccumulator,
     ThermodynamicResults,
 };
-use rand_core::RngCore;
+use rand_chacha::ChaCha20Rng;
+use rand_core::{RngCore, SeedableRng};
+use std::sync::{Arc, mpsc};
 
 /// Sampler construction or update failure.
 #[derive(Clone, Debug, PartialEq)]
@@ -59,6 +61,15 @@ pub struct OffDiagonalSweepStats {
     pub accepted: usize,
 }
 
+/// Boundary basis-state flip counts from one basis sweep.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct BasisSweepStats {
+    /// Site-flip proposals considered.
+    pub proposals: usize,
+    /// Accepted site flips.
+    pub accepted: usize,
+}
+
 /// Thermalization and measurement controls.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SimulationConfig {
@@ -88,9 +99,11 @@ pub struct SimulationResults {
     pub diagonal: DiagonalSweepStats,
     /// Aggregate off-diagonal pair statistics.
     pub off_diagonal: OffDiagonalSweepStats,
+    /// Aggregate boundary basis-state update statistics.
+    pub basis: BasisSweepStats,
 }
 
-/// Fixed-length SSE sampler with sign-safe diagonal updates.
+/// Adaptive-cutoff SSE sampler with sign-safe local updates.
 pub struct SseSampler<M, R> {
     model: M,
     state: BasisSseState,
@@ -129,6 +142,22 @@ impl<M: SseModel, R: RngCore> SseSampler<M, R> {
     /// Return instantaneous energy estimator.
     pub fn energy_estimator(&self) -> f64 {
         self.model.energy_shift() - self.state.expansion_order() as f64 / self.beta
+    }
+    /// Grow the cutoff when the identity headroom is below 25 percent.
+    pub fn ensure_operator_headroom(&mut self) -> bool {
+        let cutoff = self.state.operator_string().len();
+        if !self.identity_headroom_low() {
+            return false;
+        }
+        self.state
+            .grow_operator_string(cutoff.saturating_mul(2).max(cutoff.saturating_add(1)));
+        true
+    }
+    fn identity_headroom_low(&self) -> bool {
+        let cutoff = self.state.operator_string().len();
+        let order = self.state.expansion_order();
+        let minimum_empty = (cutoff / 4).max(16);
+        cutoff.saturating_sub(order) < minimum_empty
     }
     /// Perform one diagonal insertion/removal sweep.
     pub fn diagonal_sweep(&mut self) -> Result<DiagonalSweepStats, SamplerError> {
@@ -259,6 +288,42 @@ impl<M: SseModel, R: RngCore> SseSampler<M, R> {
         }
         Ok(stats)
     }
+    /// Propose independent symmetric flips of the imaginary-time boundary state.
+    ///
+    /// This update is necessary for trace sampling: holding the boundary bits
+    /// fixed would sample only one diagonal sector, which is exact only for
+    /// special symmetric initial states.
+    pub fn basis_state_sweep(&mut self) -> Result<BasisSweepStats, SamplerError> {
+        let mut stats = BasisSweepStats::default();
+        let old_log = configuration_log_weight(&self.state, &self.model, self.beta)?;
+        let site = (self.rng.next_u64() as usize) % self.state.bits().len();
+        stats.proposals = 1;
+        let mut candidate = self.state.clone();
+        let bit = candidate
+            .bits_mut()
+            .get_mut(site)
+            .ok_or(SamplerError::Model(SseModelError::InvalidLength {
+                expected: self.model.num_sites(),
+                actual: self.state.bits().len(),
+            }))?;
+        *bit = match *bit {
+            qslib_core::BasisBit::Zero => qslib_core::BasisBit::One,
+            qslib_core::BasisBit::One => qslib_core::BasisBit::Zero,
+        };
+        let new_log = match configuration_log_weight(&candidate, &self.model, self.beta) {
+            Ok(value) => value,
+            Err(SamplerError::Model(SseModelError::TraceNotClosed))
+            | Err(SamplerError::Model(SseModelError::NonPositiveMatrixElement { .. })) => {
+                return Ok(stats);
+            }
+            Err(error) => return Err(error),
+        };
+        if random_unit(&mut self.rng) < (new_log - old_log).exp().min(1.0) {
+            self.state = candidate;
+            stats.accepted += 1;
+        }
+        Ok(stats)
+    }
     /// Run thermalization and measurement sweeps.
     pub fn run(&mut self, config: SimulationConfig) -> Result<SimulationResults, SamplerError> {
         if config.sweeps_per_measurement == 0 {
@@ -266,19 +331,28 @@ impl<M: SseModel, R: RngCore> SseSampler<M, R> {
         }
         let mut diagonal = DiagonalSweepStats::default();
         let mut off_diagonal = OffDiagonalSweepStats::default();
+        let mut basis = BasisSweepStats::default();
         for _ in 0..config.thermalization_sweeps {
+            self.ensure_operator_headroom();
+            basis = add_basis_stats(basis, self.basis_state_sweep()?);
             let stats = self.diagonal_sweep()?;
             diagonal = add_stats(diagonal, stats);
             off_diagonal = add_off_stats(off_diagonal, self.off_diagonal_pair_sweep()?);
         }
         let mut accumulator = ThermodynamicAccumulator::default();
-        for _ in 0..config.measurement_sweeps {
+        let mut measured = 0;
+        while measured < config.measurement_sweeps {
+            if self.identity_headroom_low() {
+                return Err(SamplerError::InvalidConfig("operator_string_cutoff"));
+            }
             for _ in 0..config.sweeps_per_measurement {
+                basis = add_basis_stats(basis, self.basis_state_sweep()?);
                 let stats = self.diagonal_sweep()?;
                 diagonal = add_stats(diagonal, stats);
                 off_diagonal = add_off_stats(off_diagonal, self.off_diagonal_pair_sweep()?);
             }
             accumulator.record(self.state.expansion_order());
+            measured += 1;
         }
         let thermodynamics = accumulator
             .results(self.beta, self.model.energy_shift(), self.model.num_sites())
@@ -287,8 +361,68 @@ impl<M: SseModel, R: RngCore> SseSampler<M, R> {
             thermodynamics,
             diagonal,
             off_diagonal,
+            basis,
         })
     }
+}
+
+/// Run independent logical chains with deterministic scheduling-independent
+/// streams. Returned results are sorted by logical chain index.
+pub fn run_parallel_chains<M>(
+    model: M,
+    state: BasisSseState,
+    beta: f64,
+    config: SimulationConfig,
+    master_seed: u64,
+    chain_count: usize,
+    worker_count: usize,
+) -> Result<Vec<SimulationResults>, SamplerError>
+where
+    M: SseModel + Clone + Send + Sync + 'static,
+{
+    if chain_count == 0 {
+        return Err(SamplerError::InvalidConfig("chain_count"));
+    }
+    if worker_count == 0 {
+        return Err(SamplerError::InvalidConfig("worker_count"));
+    }
+    let workers = worker_count.min(chain_count);
+    let model = Arc::new(model);
+    let state = Arc::new(state);
+    let (sender, receiver) = mpsc::channel();
+    std::thread::scope(|scope| {
+        for worker in 0..workers {
+            let model = Arc::clone(&model);
+            let state = Arc::clone(&state);
+            let sender = sender.clone();
+            scope.spawn(move || {
+                for chain_index in (worker..chain_count).step_by(workers) {
+                    let result = SseSampler::new(
+                        (*model).clone(),
+                        (*state).clone(),
+                        beta,
+                        ChaCha20Rng::from_seed(crate::derive_chain_seed(
+                            master_seed,
+                            chain_index as u64,
+                        )),
+                    )
+                    .and_then(|mut sampler| sampler.run(config));
+                    if sender.send((chain_index, result)).is_err() {
+                        return;
+                    }
+                }
+            });
+        }
+        drop(sender);
+        let mut results: Vec<Option<SimulationResults>> = (0..chain_count).map(|_| None).collect();
+        for _ in 0..chain_count {
+            let (chain_index, result) = receiver
+                .recv()
+                .map_err(|_| SamplerError::InvalidConfig("chain worker"))?;
+            results[chain_index] = Some(result?);
+        }
+        Ok(results.into_iter().flatten().collect())
+    })
 }
 fn add_stats(left: DiagonalSweepStats, right: DiagonalSweepStats) -> DiagonalSweepStats {
     DiagonalSweepStats {
@@ -306,6 +440,12 @@ fn add_off_stats(
     right: OffDiagonalSweepStats,
 ) -> OffDiagonalSweepStats {
     OffDiagonalSweepStats {
+        proposals: left.proposals + right.proposals,
+        accepted: left.accepted + right.accepted,
+    }
+}
+fn add_basis_stats(left: BasisSweepStats, right: BasisSweepStats) -> BasisSweepStats {
+    BasisSweepStats {
         proposals: left.proposals + right.proposals,
         accepted: left.accepted + right.accepted,
     }

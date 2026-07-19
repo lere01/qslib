@@ -5,11 +5,13 @@
 
 pub use qslib_core::BasisBit;
 
+mod legacy;
 mod measurements;
 mod model;
 mod sampler;
 mod state;
 
+pub use legacy::*;
 pub use measurements::*;
 pub use model::*;
 pub use sampler::*;

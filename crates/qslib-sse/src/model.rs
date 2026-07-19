@@ -1,6 +1,6 @@
 //! Canonical qslib SSE terms and sign-safe TFIM/Rydberg decompositions.
 
-use qslib_core::BasisBit;
+use qslib_core::{BasisBit, InteractionChannel, WeightedInteraction};
 use std::fmt::{self, Display, Formatter};
 
 /// Identity, diagonal, or off-diagonal classification of an SSE vertex.
@@ -129,6 +129,8 @@ pub enum SseModelError {
     TraceNotClosed,
     /// A non-finite numeric input or result occurred.
     NonFinite(&'static str),
+    /// A canonical interaction channel is not supported by this decomposition.
+    UnsupportedInteractionChannel,
 }
 impl Display for SseModelError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -156,6 +158,9 @@ impl Display for SseModelError {
             ),
             Self::TraceNotClosed => f.write_str("SSE operator string does not close the trace"),
             Self::NonFinite(name) => write!(f, "non-finite SSE {name}"),
+            Self::UnsupportedInteractionChannel => {
+                f.write_str("canonical interaction channel is not supported by TFIM SSE")
+            }
         }
     }
 }
@@ -245,6 +250,31 @@ impl LocalSseModel {
         }
         Self::new(num_sites, terms, shift)
     }
+    /// Build TFIM from canonical resolved Ising interactions.
+    ///
+    /// This is the preferred adapter for callers that already use qslib-core's
+    /// checked interaction vocabulary. The tuple constructor remains as a
+    /// convenience for small scripts and legacy integrations.
+    pub fn tfim_resolved(
+        num_sites: usize,
+        interactions: &[WeightedInteraction],
+        fields: &[f64],
+    ) -> Result<Self, SseModelError> {
+        let bonds = interactions
+            .iter()
+            .map(|interaction| {
+                if interaction.channel() != &InteractionChannel::IsingZZ {
+                    return Err(SseModelError::UnsupportedInteractionChannel);
+                }
+                Ok((
+                    interaction.bond().first().get(),
+                    interaction.bond().second().get(),
+                    interaction.coefficient(),
+                ))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Self::tfim_weighted(num_sites, &bonds, fields)
+    }
     /// Build the canonical Rydberg decomposition with bit-one occupation.
     pub fn rydberg(
         num_sites: usize,
@@ -296,6 +326,31 @@ impl LocalSseModel {
             shift += pair_shift;
         }
         Self::new(num_sites, terms, shift)
+    }
+    /// Build Rydberg SSE from canonical resolved density-density interactions.
+    ///
+    /// Detunings remain explicit per-site coefficients while each canonical
+    /// `RydbergDensityDensity` interaction supplies its own pair strength.
+    pub fn rydberg_resolved(
+        num_sites: usize,
+        detunings: &[f64],
+        interactions: &[WeightedInteraction],
+        omega: f64,
+    ) -> Result<Self, SseModelError> {
+        let pairs = interactions
+            .iter()
+            .map(|interaction| {
+                if interaction.channel() != &InteractionChannel::RydbergDensityDensity {
+                    return Err(SseModelError::UnsupportedInteractionChannel);
+                }
+                Ok((
+                    interaction.bond().first().get(),
+                    interaction.bond().second().get(),
+                    interaction.coefficient(),
+                ))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Self::rydberg(num_sites, detunings, &pairs, omega)
     }
     fn new(num_sites: usize, terms: Vec<SseTerm>, shift: f64) -> Result<Self, SseModelError> {
         if num_sites == 0 || terms.is_empty() {

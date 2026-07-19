@@ -1,4 +1,4 @@
-use crate::{Bond, Real, SiteCount, SiteId};
+use crate::{Bond, Real, SiteCount, SiteId, derive_seed};
 use blake3::Hasher;
 use rand_chacha::ChaCha20Rng;
 use rand_core::{Rng, SeedableRng};
@@ -382,11 +382,6 @@ impl InteractionTable {
             .iter()
             .map(|term| {
                 let identity_digest = canonical_identity_digest(term);
-                let mut hasher = Hasher::new_keyed(&seed);
-                hasher.update(b"qslib-seed-v1\0");
-                let domain = b"disorder";
-                hasher.update(&(domain.len() as u32).to_le_bytes());
-                hasher.update(domain);
                 let indices = [
                     realization_index,
                     term.bond().first().get() as u64,
@@ -401,13 +396,7 @@ impl InteractionTable {
                     digest_word(&identity_digest[16..24]),
                     digest_word(&identity_digest[24..32]),
                 ];
-                hasher.update(&(indices.len() as u32).to_le_bytes());
-                for index in indices {
-                    hasher.update(&index.to_le_bytes());
-                }
-                let digest = hasher.finalize();
-                let mut child_seed = [0_u8; 32];
-                child_seed.copy_from_slice(digest.as_bytes());
+                let child_seed = derive_seed(&seed, "disorder", &indices);
                 let mut rng = ChaCha20Rng::from_seed(child_seed);
                 let unit = rng.next_u64() as Real / u64::MAX as Real;
                 WeightedInteraction {

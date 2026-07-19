@@ -63,6 +63,10 @@ impl BasisSseState {
     pub fn bits(&self) -> &[BasisBit] {
         &self.bits
     }
+    /// Mutably borrow canonical basis bits for a validated boundary-state update.
+    pub(crate) fn bits_mut(&mut self) -> &mut [BasisBit] {
+        &mut self.bits
+    }
     /// Borrow the padded operator string.
     pub fn operator_string(&self) -> &[Operator] {
         &self.operators
@@ -77,6 +81,12 @@ impl BasisSseState {
             .iter()
             .filter(|operator| !matches!(operator, Operator::Identity))
             .count()
+    }
+    /// Grow the padded cutoff while preserving all existing operators.
+    pub fn grow_operator_string(&mut self, new_length: usize) {
+        if new_length > self.operators.len() {
+            self.operators.resize(new_length, Operator::identity());
+        }
     }
     /// Propagation result including the logarithmic path weight.
     pub fn propagate<M: SseModel>(&self, model: &M) -> Result<PropagationResult, SseModelError> {

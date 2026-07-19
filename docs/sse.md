@@ -18,7 +18,22 @@ pair interactions, preserving pair-dependent coefficients and applying the
 canonical occupation convention.
 
 `BasisSseState` stores a padded operator string and validates propagation and
-trace closure. `SseSampler` currently provides sign-safe diagonal
-insertion/removal updates and thermodynamic expansion-order estimators. A
-caller must validate unsupported update families before requesting them; no
-legacy `Spin` semantics are silently inferred.
+trace closure. The sampler performs three explicit Metropolis update families:
+diagonal insertion/removal, paired off-diagonal vertices, and boundary basis
+state flips. The latter is required for ergodic trace sampling and is model
+agnostic because it operates on canonical `BasisBit` values. Operator strings
+grow geometrically when their identity headroom is low, preserving all existing
+vertices. Thermodynamic estimators use expansion-order moments.
+The result also reports a naive independent-sample energy standard error;
+correlated chains must be combined through independent logical chains for a
+confidence interval.
+
+Cutoff growth is permitted during thermalization only. If identity headroom is
+insufficient after thermalization, the run fails explicitly instead of mixing
+finite-cutoff ensembles in one estimate.
+
+`qslib_sse::legacy` contains opt-in adapters for old `Up`/`Down` labels. The
+adapter requires a model family because TFIM and Rydberg occupation semantics
+differ. `derive_chain_seed` and `logical_chain_seeds` provide deterministic
+logical chain seeds suitable for sequential, threaded, or process-level
+execution without coupling results to a particular thread count.
