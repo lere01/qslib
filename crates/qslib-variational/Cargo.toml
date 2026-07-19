@@ -14,3 +14,4 @@ name = "qslib_variational"
 
 [dependencies]
 qslib-core = { package = "qslib-quantum-core", version = "0.1.0", path = "../qslib-core" }
+blake3.workspace = true

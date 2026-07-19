@@ -121,6 +121,12 @@ weighted online real and complex moments, autocorrelation and effective sample
 size diagnostics, classic R-hat, and disorder-realization aggregation. See
 the [`../observables-statistics.md`](../observables-statistics.md) contract.
 
+Milestone 8 adds caller-supplied weighted TDVP statistics, deterministic
+parameter-layout fingerprints, dense QGT matrix-vector products, conjugate
+gradient solves, fixed Tikhonov, GCV, spectral cutoffs, clipping, and residual
+diagnostics. Neural-network derivative evaluation remains outside the Rust
+kernel boundary. See the [`../tdvp.md`](../tdvp.md) contract.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:

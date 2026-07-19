@@ -187,6 +187,7 @@ dependencies = [
 name = "qslib-quantum-variational"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "qslib-quantum-core",
 ]
 

@@ -110,12 +110,13 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   complete workspace quality suite and CLI ground-state gate pass.
 - [x] (2026-07-19) Completed Milestone 7: implemented observables, online statistics,
   autocorrelation diagnostics, and disorder aggregation.
-- [x] Complete Milestone 7: implement observables, online statistics,
-  autocorrelation diagnostics, and disorder aggregation.
-- [ ] In progress: Milestone 8 implements variational local-energy and TDVP
-  numerical kernels.
-- [ ] Complete Milestone 8: implement variational local-energy and TDVP
-  numerical kernels from caller-supplied samples and derivatives.
+- [x] (2026-07-19) Completed Milestone 8: implemented weighted caller-supplied
+  variational local-energy and TDVP kernels, including exact mode signs, dense and
+  streamed QGT operations, fixed/GCV/spectral regularization, clipping, residual
+  diagnostics, typed solver provenance, and BLAKE3 parameter-layout fingerprints.
+  Architect closure review approved; the complete workspace quality suite passes.
+- [ ] In progress: Milestone 9 implements transactional real- and imaginary-time
+  integration and checkpointable evolution state.
 - [ ] Complete Milestone 9: implement transactional real- and imaginary-time
   integration and checkpointable evolution state.
 - [ ] Complete Milestone 10: migrate and reconcile the supported SSE algorithms.
@@ -863,6 +864,19 @@ independent formulas and parity cases from `tests/test_variational_tdvp.py` as
 neutral fixtures. The gate passes when dense, matrix-vector, and streamed
 solutions agree on manufactured positive-semidefinite problems and real- and
 imaginary-time signs match the convention document.
+
+Implementation record (2026-07-19): weighted and unweighted caller-supplied
+statistics, complex force components, row-oriented local-energy ratio
+aggregation, streamed QGT products, dense QGT validation and eigenspectra,
+relative-tolerance conjugate gradients, fixed Tikhonov/GCV/spectral-cutoff
+regularization, update clipping, projected residual and roundoff-floor
+diagnostics, typed mode/representation/solver provenance, and BLAKE3-v1
+parameter-layout fingerprints are implemented in `qslib-variational`. The
+reference tests cover analytic QGT/force values, complex-coefficient local
+energy, streamed/dense parity, scale-invariant spectral cutoffs, degenerate
+maximum modes, invalid numerical inputs, and solver diagnostics. The workspace
+test, Clippy, rustdoc, formatting, and diff gates pass; the qslib architect
+approved closure.
 
 ### Milestone 9: integration and checkpointable evolution
 

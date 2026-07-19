@@ -6,6 +6,10 @@
 use qslib_core::Complex64;
 use std::fmt::{self, Display, Formatter};
 
+mod tdvp;
+
+pub use tdvp::*;
+
 /// Errors from weighted statistics and chain diagnostics.
 #[derive(Clone, Debug, PartialEq)]
 pub enum StatisticsError {
