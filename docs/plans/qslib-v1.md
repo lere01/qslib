@@ -690,6 +690,45 @@ invalid configurations. The gate passes when matrices and local energies match
 independent Python fixtures on small systems and every model can be inspected
 as a resolved weighted-term table.
 
+Execution record (2026-07-19): operator and model acceptance tests were added
+before implementation. The focused Rust 1.85 run failed at compilation with
+unresolved `PauliString`, `ModelError`, and TFIM/Heisenberg/Rydberg builder APIs,
+which is the intended M4 red state.
+
+The red contract was then expanded before production work: typed Ising,
+Heisenberg, and Rydberg channels; explicit Hermitian matrix checks; TFIM x-basis
+rotation; signed heterogeneous three-site exchange; J1-J2 shell shorthand;
+ordered Pauli-product reduction; non-Hermitian rejection; and deterministic
+duplicate-term handling are now required by the tests.
+
+Implementation record (2026-07-19): M4 now supplies canonical Pauli action,
+ordered-product phase reduction, constant folding, deterministic duplicate
+combination, Hermitian coefficient validation, explicit matrix application,
+and local-energy evaluation with the correct Hermitian matrix-element
+orientation. Missing connected amplitudes are errors. TFIM, isotropic
+Heisenberg, J1-J2, and driven Rydberg builders validate typed interaction
+channels and finite inputs, preserve signed pair coefficients, support the
+documented simulation bases, and return `ResolvedModel` provenance wrappers.
+The wrapper retains model family, basis, weighted interaction identities, and
+site parameters while dereferencing to `Hamiltonian` for numerical consumers.
+Independent tests cover heterogeneous pair terms, Rydberg occupation energies,
+J1/J2 exact shell counts, triangular rejection, Hermiticity, complex Pauli
+local energy, identity reduction, and basis-spectrum invariants. Focused and
+workspace Rust 1.85 tests, Clippy with warnings denied, and rustdoc with
+warnings denied are green; architect closure review is pending.
+
+The closure corrections are also implemented: local energy now preserves a
+general complex coefficient while conjugating only the Hermitian Pauli matrix
+element; duplicate floating-point contributions use a canonical coefficient
+ordering; `j1j2_disordered` validates exact shell lengths and preserves signed,
+zero, and overlapping shell identities; `ResolvedModel` retains a typed
+`ModelSpecification`; and qslib-core tests compare complete model matrices and
+local-energy rows against the independent neutral fixtures in
+`fixtures/conformance/v1/`. The final architect audit is pending.
+The final qslib-architect audit approved M4 after rerunning 55 qslib-core
+integration tests, Clippy with warnings denied, and rustdoc with warnings
+denied.
+
 ### Milestone 5: symmetry and sectors
 
 Implement site permutations, composition, inverse, finite groups, translations,

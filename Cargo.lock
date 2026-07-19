@@ -149,8 +149,10 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "num-complex",
+ "qslib-test-support",
  "rand_chacha",
  "rand_core",
+ "serde_json",
 ]
 
 [[package]]

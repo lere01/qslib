@@ -85,7 +85,8 @@ pub struct Fixture {
     pub conventions: Value,
     /// Case-specific expected values and physical inputs.
     pub data: Value,
-    comparison: ComparisonPolicy,
+    /// Quantity-specific comparison policy for expected values.
+    pub comparison: ComparisonPolicy,
 }
 
 /// A structured failure while parsing or validating neutral fixture evidence.
@@ -162,6 +163,11 @@ impl Fixture {
         self.comparison.validate()?;
         validate_case(self.kind, &self.data, self.comparison.tolerance())
             .map_err(|error| FixtureError::new(format!("fixture {}: {error}", self.id)))
+    }
+
+    /// Return the quantity-specific comparison policy.
+    pub const fn comparison(&self) -> &ComparisonPolicy {
+        &self.comparison
     }
 }
 
@@ -288,18 +294,28 @@ struct RawFixture {
     data: Value,
 }
 
+/// Comparison policy recorded by a conformance fixture.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-enum ComparisonPolicy {
+pub enum ComparisonPolicy {
+    /// Require exact equality for the recorded quantity.
     Exact {
+        /// Quantity being compared.
         quantity: String,
+        /// Reason exact comparison is valid.
         rationale: String,
     },
+    /// Compare using absolute plus relative tolerances.
     FloatingPoint {
+        /// Numeric representation used by the fixture.
         dtype: String,
+        /// Quantity being compared.
         quantity: String,
+        /// Absolute tolerance.
         absolute_tolerance: f64,
+        /// Relative tolerance.
         relative_tolerance: f64,
+        /// Reason the tolerances are appropriate.
         rationale: String,
     },
 }
@@ -342,6 +358,31 @@ impl ComparisonPolicy {
             Self::FloatingPoint {
                 absolute_tolerance, ..
             } => *absolute_tolerance,
+        }
+    }
+
+    /// Return whether the comparison is exact.
+    pub const fn is_exact(&self) -> bool {
+        matches!(self, Self::Exact { .. })
+    }
+
+    /// Return the absolute tolerance, or zero for exact comparisons.
+    pub const fn absolute_tolerance(&self) -> f64 {
+        match self {
+            Self::Exact { .. } => 0.0,
+            Self::FloatingPoint {
+                absolute_tolerance, ..
+            } => *absolute_tolerance,
+        }
+    }
+
+    /// Return the relative tolerance, or zero for exact comparisons.
+    pub const fn relative_tolerance(&self) -> f64 {
+        match self {
+            Self::Exact { .. } => 0.0,
+            Self::FloatingPoint {
+                relative_tolerance, ..
+            } => *relative_tolerance,
         }
     }
 }

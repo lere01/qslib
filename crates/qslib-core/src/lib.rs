@@ -12,6 +12,8 @@ mod error;
 mod geometry;
 mod identifiers;
 mod interactions;
+mod models;
+mod operators;
 mod scalar;
 
 pub use basis::{
@@ -27,4 +29,8 @@ pub use interactions::{
     DenseCouplings, DisorderProvenance, DisorderRealization, InteractionChannel, InteractionError,
     InteractionIdentity, InteractionTable, SparseCouplings, WeightedInteraction,
 };
+pub use models::{
+    ModelError, ModelSpecification, ResolvedModel, heisenberg, j1j2, j1j2_disordered, rydberg, tfim,
+};
+pub use operators::{Hamiltonian, OperatorError, Pauli, PauliString};
 pub use scalar::{Complex64, Real, ensure_finite};

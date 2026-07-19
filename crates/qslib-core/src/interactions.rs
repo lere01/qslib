@@ -136,8 +136,12 @@ impl std::error::Error for InteractionError {}
 /// Operator channel attached to one weighted interaction.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum InteractionChannel {
+    /// Ising `Z_i Z_j` bond channel.
+    IsingZZ,
     /// Isotropic Heisenberg exchange channel.
     HeisenbergExchange,
+    /// Rydberg occupation-density pair channel.
+    RydbergDensityDensity,
     /// Generic named channel for model-specific operators.
     Generic(String),
 }
@@ -441,8 +445,14 @@ fn canonical_identity_digest(term: &WeightedInteraction) -> [u8; 32] {
     hasher.update(&term.bond().direction().0.to_le_bytes());
     hasher.update(&term.bond().direction().1.to_le_bytes());
     match term.channel() {
+        InteractionChannel::IsingZZ => {
+            hasher.update(b"ising_zz");
+        }
         InteractionChannel::HeisenbergExchange => {
             hasher.update(b"heisenberg_exchange");
+        }
+        InteractionChannel::RydbergDensityDensity => {
+            hasher.update(b"rydberg_density_density");
         }
         InteractionChannel::Generic(value) => {
             hasher.update(b"generic");
@@ -528,6 +538,11 @@ impl DenseCouplings {
             }
         }
         Ok(Self { site_count, values })
+    }
+
+    /// Return the number of sites represented by the matrix.
+    pub const fn site_count(&self) -> SiteCount {
+        self.site_count
     }
 
     /// Resolve upper-triangle entries into canonical interactions.

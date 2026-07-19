@@ -17,3 +17,7 @@ blake3.workspace = true
 num-complex.workspace = true
 rand_chacha.workspace = true
 rand_core.workspace = true
+
+[dev-dependencies]
+qslib-test-support = { path = "../qslib-test-support" }
+serde_json.workspace = true

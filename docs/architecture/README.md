@@ -98,6 +98,13 @@ provenance. The user-facing physical explanation is in
 [`../geometry-interactions.md`](../geometry-interactions.md). Model assembly,
 Hamiltonian action, and interoperability adapters remain downstream layers.
 
+Milestone 4 adds the operator and model boundary in `qslib-core`: Pauli action,
+Hermitian Hamiltonian term resolution, basis-aware TFIM, isotropic Heisenberg,
+J1-J2 shell shorthand, Rydberg density expansion, and local-energy evaluation
+remain independent of exact, variational, thermal, or sampling algorithms. See
+the [`../operators-models.md`](../operators-models.md) guide for physical sign
+and basis conventions.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:

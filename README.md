@@ -49,6 +49,8 @@ execution remains pending owner-authorized push activity.
 For a physicist-first introduction to site order, boundaries, pair-dependent
 couplings, and disorder provenance, see the
 [geometry and interactions guide](docs/geometry-interactions.md).
+For operator action, Hamiltonian signs, basis rotations, and model constructors,
+see the [operators and models guide](docs/operators-models.md).
 
 ## Project policies
 

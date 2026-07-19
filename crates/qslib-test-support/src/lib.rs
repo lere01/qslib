@@ -10,6 +10,6 @@
 mod fixture;
 
 pub use fixture::{
-    Authorship, CONVENTION_SCHEMA, FIXTURE_SCHEMA, Fixture, FixtureError, FixtureKind, Oracle,
-    load_conformance_fixtures, required_fixture_kinds, validate_fixture_set,
+    Authorship, CONVENTION_SCHEMA, ComparisonPolicy, FIXTURE_SCHEMA, Fixture, FixtureError,
+    FixtureKind, Oracle, load_conformance_fixtures, required_fixture_kinds, validate_fixture_set,
 };
