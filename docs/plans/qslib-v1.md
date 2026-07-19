@@ -202,6 +202,11 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   integer order without eagerly materializing a sector.
   Evidence: the iterator advances a checked ascending position list and passes
   the independent N=4,K=2 vector `[3, 5, 6, 9, 10, 12]`, including K=0 and K=N.
+- Observation: the finalized M2 commit is reproducible from a fresh local
+  checkout after adding the scalar dependency and direct facade exports.
+  Evidence: clone at `931fc67` was clean and passed complete Rust 1.85 and
+  stable workspace test suites, including seven core basis tests, the facade
+  smoke test, five fixture tests, and three workspace-boundary tests.
 - Observation: the initial M2 implementation review exposed portability and
   panic risks that focused tests alone did not reveal.
   Evidence: the architect review required checked full-basis dimensions,
