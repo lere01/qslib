@@ -1,0 +1,35 @@
+{
+  "fixture_schema": "qslib-conformance-fixture-v1",
+  "convention_schema": "qslib-conventions-v1",
+  "id": "rectangular_indexing_lx3_ly2",
+  "kind": "rectangular_indexing",
+  "claim": "A 3 by 2 rectangle uses row-major site identifiers and canonical simple nearest-neighbour bonds.",
+  "oracle": {
+    "method": "analytic_definition",
+    "source": "docs/conventions.md#241-rectangular-indexing",
+    "source_revision": "qslib-conventions-v1-draft-2026-07-19",
+    "derivation": "Evaluate i = x + Lx*y for every coordinate and enumerate unordered nearest-neighbour pairs by hand.",
+    "independent_of_production": true
+  },
+  "authorship": { "prepared_by": "qslib specification authors", "reviewed_by": "qslib-architect", "reviewed_on": "2026-07-19" },
+  "conventions": {
+    "site_order": "row_major",
+    "bond_multiplicity": "simple",
+    "coordinate_order": ["x", "y"]
+  },
+  "comparison": { "kind": "exact", "quantity": "integer identifiers and bonds", "rationale": "All expected values are integers obtained directly from definitions." },
+  "data": {
+    "lx": 3,
+    "ly": 2,
+    "coordinate_to_site": [
+      { "coordinate": [0, 0], "site": 0 },
+      { "coordinate": [1, 0], "site": 1 },
+      { "coordinate": [2, 0], "site": 2 },
+      { "coordinate": [0, 1], "site": 3 },
+      { "coordinate": [1, 1], "site": 4 },
+      { "coordinate": [2, 1], "site": 5 }
+    ],
+    "open_bonds": [[0, 1], [0, 3], [1, 2], [1, 4], [2, 5], [3, 4], [4, 5]],
+    "periodic_bonds": [[0, 1], [0, 2], [0, 3], [1, 2], [1, 4], [2, 5], [3, 4], [3, 5], [4, 5]]
+  }
+}

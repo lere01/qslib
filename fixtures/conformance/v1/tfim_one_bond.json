@@ -1,0 +1,45 @@
+{
+  "fixture_schema": "qslib-conformance-fixture-v1",
+  "convention_schema": "qslib-conventions-v1",
+  "id": "tfim_one_bond_j2_h0p5_z_basis",
+  "kind": "tfim_one_bond",
+  "claim": "The canonical two-site TFIM matrix applies a separate -J ZZ bond term and -h X onsite terms.",
+  "oracle": {
+    "method": "explicit_pauli_matrix",
+    "source": "docs/conventions.md#243-two-site-tfim",
+    "source_revision": "qslib-conventions-v1-draft-2026-07-19",
+    "derivation": "Form -2*Z0*Z1 - 0.5*(X0 + X1) from the two-by-two Pauli matrices and the little-endian mask basis.",
+    "independent_of_production": true
+  },
+  "authorship": { "prepared_by": "qslib specification authors", "reviewed_by": "qslib-architect", "reviewed_on": "2026-07-19" },
+  "conventions": {
+    "simulation_basis": "z",
+    "basis_masks": [0, 1, 2, 3],
+    "packed_state_endianness": "little_endian_by_site",
+    "coefficient_scope": "resolved_per_term"
+  },
+  "comparison": { "kind": "exact", "quantity": "Hamiltonian matrix entries", "rationale": "The chosen binary-rational coefficients are represented exactly." },
+  "data": {
+    "site_count": 2,
+    "bond": [0, 1],
+    "j": 2.0,
+    "fields": [0.5, 0.5],
+    "weighted_interactions": [
+      { "interaction_id": "pair:0-1:pauli_zz", "sites": [0, 1], "channel": "pauli_zz", "coefficient": -2.0 },
+      { "interaction_id": "site:0:pauli_x", "sites": [0], "channel": "pauli_x", "coefficient": -0.5 },
+      { "interaction_id": "site:1:pauli_x", "sites": [1], "channel": "pauli_x", "coefficient": -0.5 }
+    ],
+    "matrix": {
+      "shape": [4, 4],
+      "dtype": "complex_f64",
+      "layout": "row_major",
+      "entry_definition": "entries[row,column] = <basis[row]|H|basis[column]>",
+      "entries": [
+        { "re": -2.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": 0.0, "im": 0.0 },
+        { "re": -0.5, "im": 0.0 }, { "re": 2.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 },
+        { "re": -0.5, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 2.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 },
+        { "re": 0.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": -2.0, "im": 0.0 }
+      ]
+    }
+  }
+}

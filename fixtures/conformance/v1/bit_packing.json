@@ -1,0 +1,29 @@
+{
+  "fixture_schema": "qslib-conformance-fixture-v1",
+  "convention_schema": "qslib-conventions-v1",
+  "id": "bit_packing_1011",
+  "kind": "bit_packing",
+  "claim": "Bits in ascending site order pack little-endian by site and retain the specified local physical values.",
+  "oracle": {
+    "method": "integer_arithmetic",
+    "source": "docs/conventions.md#242-bit-packing-and-local-values",
+    "source_revision": "qslib-conventions-v1-draft-2026-07-19",
+    "derivation": "Compute sum_i b_i*2^i, z_i = 1 - 2*b_i, and sum_i b_i directly.",
+    "independent_of_production": true
+  },
+  "authorship": { "prepared_by": "qslib specification authors", "reviewed_by": "qslib-architect", "reviewed_on": "2026-07-19" },
+  "conventions": {
+    "site_order": "site_id_ascending",
+    "packed_state_endianness": "little_endian_by_site",
+    "bit_zero_axis_eigenvalue": 1,
+    "rydberg_occupation": "equals_bit"
+  },
+  "comparison": { "kind": "exact", "quantity": "bits, mask, local values, and Hamming weight", "rationale": "All expected values are exact integers." },
+  "data": {
+    "bits": [1, 0, 1, 1],
+    "packed_mask": 13,
+    "pauli_z_values": [-1, 1, -1, -1],
+    "rydberg_occupancies": [1, 0, 1, 1],
+    "hamming_weight": 3
+  }
+}

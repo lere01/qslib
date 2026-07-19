@@ -1,0 +1,36 @@
+{
+  "fixture_schema": "qslib-conformance-fixture-v1",
+  "convention_schema": "qslib-conventions-v1",
+  "id": "heisenberg_three_site_pair_dependent",
+  "kind": "heisenberg_heterogeneous",
+  "claim": "Each Heisenberg bond retains its own signed coefficient during diagonal and pair-flip action.",
+  "oracle": {
+    "method": "term_by_term_spin_algebra",
+    "source": "docs/conventions.md#245-pair-dependent-heisenberg-couplings",
+    "source_revision": "qslib-conventions-v1-draft-2026-07-19",
+    "derivation": "Apply each weighted exchange term independently to bit state 010 and add only diagonal contributions.",
+    "independent_of_production": true
+  },
+  "authorship": { "prepared_by": "qslib specification authors", "reviewed_by": "qslib-architect", "reviewed_on": "2026-07-19" },
+  "conventions": {
+    "simulation_basis": "z",
+    "site_order": "site_id_ascending",
+    "packed_state_endianness": "little_endian_by_site",
+    "coefficient_scope": "resolved_per_interaction"
+  },
+  "comparison": { "kind": "exact", "quantity": "resolved coefficients and state action", "rationale": "The expected rational matrix elements are exactly representable." },
+  "data": {
+    "site_count": 3,
+    "input_bits": [0, 1, 0],
+    "input_mask": 2,
+    "weighted_bonds": [
+      { "sites": [0, 1], "j": 2.0 },
+      { "sites": [1, 2], "j": -3.0 }
+    ],
+    "diagonal_energy": 0.25,
+    "connections": [
+      { "output_bits": [1, 0, 0], "output_mask": 1, "matrix_element": 1.0 },
+      { "output_bits": [0, 0, 1], "output_mask": 4, "matrix_element": -1.5 }
+    ]
+  }
+}

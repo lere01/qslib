@@ -1,0 +1,16 @@
+[package]
+name = "qslib-quantum-sse"
+description = "Finite-temperature stochastic series expansion for qslib"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+
+[lib]
+name = "qslib_sse"
+
+[dependencies]
+qslib-core = { package = "qslib-quantum-core", version = "0.1.0", path = "../qslib-core" }

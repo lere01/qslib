@@ -1,0 +1,31 @@
+{
+  "fixture_schema": "qslib-conformance-fixture-v1",
+  "convention_schema": "qslib-conventions-v1",
+  "id": "all_zero_z_product_observables",
+  "kind": "observable_normalization",
+  "claim": "The all-zero z-basis product state has unit raw Z order, zero connected correlation, and zero Fisher density.",
+  "oracle": {
+    "method": "product_state_expectation",
+    "source": "docs/conventions.md#247-observable-normalization",
+    "source_revision": "qslib-conventions-v1-draft-2026-07-19",
+    "derivation": "Use Z_i|0> = |0>, factorize product-state correlations, and subtract the product of one-point means.",
+    "independent_of_production": true
+  },
+  "authorship": { "prepared_by": "qslib specification authors", "reviewed_by": "qslib-architect", "reviewed_on": "2026-07-19" },
+  "conventions": {
+    "simulation_basis": "z",
+    "observable_axis": "z",
+    "magnetization_normalization": "per_site",
+    "correlation_kind": ["raw", "connected"],
+    "fisher_generator": "sum_pauli_z_over_two"
+  },
+  "comparison": { "kind": "exact", "quantity": "product-state expectation values", "rationale": "The product-state expectations and variances are exact integers." },
+  "data": {
+    "site_count": 4,
+    "bits": [0, 0, 0, 0],
+    "sigma_z_per_site": 1.0,
+    "raw_zz_for_every_pair": 1.0,
+    "connected_zz_for_every_pair": 0.0,
+    "uniform_pauli_generator_fisher_density": 0.0
+  }
+}

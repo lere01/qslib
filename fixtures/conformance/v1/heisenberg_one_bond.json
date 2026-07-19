@@ -1,0 +1,42 @@
+{
+  "fixture_schema": "qslib-conformance-fixture-v1",
+  "convention_schema": "qslib-conventions-v1",
+  "id": "heisenberg_one_bond_j2_z_basis",
+  "kind": "heisenberg_one_bond",
+  "claim": "One isotropic spin-half exchange bond has J/4 diagonal and J/2 antiparallel pair-flip matrix elements.",
+  "oracle": {
+    "method": "spin_half_ladder_operators",
+    "source": "docs/conventions.md#244-one-heisenberg-bond",
+    "source_revision": "qslib-conventions-v1-draft-2026-07-19",
+    "derivation": "Evaluate 2*(Sx0*Sx1 + Sy0*Sy1 + Sz0*Sz1) with S = sigma/2.",
+    "independent_of_production": true
+  },
+  "authorship": { "prepared_by": "qslib specification authors", "reviewed_by": "qslib-architect", "reviewed_on": "2026-07-19" },
+  "conventions": {
+    "simulation_basis": "z",
+    "basis_masks": [0, 1, 2, 3],
+    "packed_state_endianness": "little_endian_by_site",
+    "operator_normalization": "spin_half"
+  },
+  "comparison": { "kind": "exact", "quantity": "Hamiltonian matrix entries", "rationale": "The chosen integer coupling produces exactly representable half-integer entries." },
+  "data": {
+    "site_count": 2,
+    "bond": [0, 1],
+    "j": 2.0,
+    "weighted_interactions": [
+      { "interaction_id": "pair:0-1:heisenberg_exchange", "sites": [0, 1], "channel": "heisenberg_exchange", "coefficient": 2.0 }
+    ],
+    "matrix": {
+      "shape": [4, 4],
+      "dtype": "complex_f64",
+      "layout": "row_major",
+      "entry_definition": "entries[row,column] = <basis[row]|H|basis[column]>",
+      "entries": [
+        { "re": 0.5, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 },
+        { "re": 0.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": 1.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 },
+        { "re": 0.0, "im": 0.0 }, { "re": 1.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": 0.0, "im": 0.0 },
+        { "re": 0.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 0.5, "im": 0.0 }
+      ]
+    }
+  }
+}

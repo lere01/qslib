@@ -1,0 +1,18 @@
+[package]
+name = "qslib-test-support"
+description = "Independent conformance fixtures and test oracles for qslib"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[lib]
+name = "qslib_test_support"
+
+[dependencies]
+blake3.workspace = true
+serde.workspace = true
+serde_json.workspace = true

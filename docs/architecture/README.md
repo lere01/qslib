@@ -49,6 +49,26 @@ second implementation. ADR-0001, ADR-0008, and ADR-0009 approve this topology,
 the dedicated repository boundary, and package names. No competing production
 structure may be introduced without a superseding decision record.
 
+Cargo uses collision-safe distribution names while Rust code retains concise
+imports:
+
+| Responsibility | Cargo package | Rust target |
+| --- | --- | --- |
+| Facade | `qslib-quantum` | `qslib` |
+| Foundations | `qslib-quantum-core` | `qslib_core` |
+| Exact methods | `qslib-quantum-exact` | `qslib_exact` |
+| Variational methods | `qslib-quantum-variational` | `qslib_variational` |
+| Thermal SSE | `qslib-quantum-sse` | `qslib_sse` |
+| Scientific IO | `qslib-quantum-io` | `qslib_io` |
+| Python boundary | `qslib-quantum-python` | `qslib_quantum` |
+| Command line | `qslib-quantum-cli` | `qslib` binary |
+| Test support | `qslib-test-support` | `qslib_test_support` |
+
+The facade has no default optional features. Core is always present. The
+additive `exact`, `variational`, `sse`, and `io` features expose capability
+crates, and `full` enables those four Rust capabilities. CLI and Python remain
+separate packages.
+
 ## Stable boundaries
 
 - Geometry defines sites, coordinates, boundaries, bonds, and distances. It
@@ -108,6 +128,15 @@ in an explicit reference or exact backend with its own public contract.
 Regression fixes begin with a failing reproduction. Tests should bind to public
 behavior and scientific invariants, leaving private implementation structure
 free to evolve.
+
+Neutral conformance data lives under `fixtures/conformance/v1/`. Every fixture
+states one physical or representational claim, its resolved conventions, an
+independent derivation, authorship and review provenance, and a
+quantity-specific comparison policy. Matrices record basis masks, complex
+`f64` entries, shape, row-major layout, and the matrix-element definition. A
+sorted manifest binds all eight required fixture kinds to their BLAKE3 digests.
+The test-support harness validates this evidence without depending on a
+production qslib crate.
 
 ## Validation architecture
 

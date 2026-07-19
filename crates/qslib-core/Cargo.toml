@@ -1,0 +1,15 @@
+[package]
+name = "qslib-quantum-core"
+description = "Foundational scientific vocabulary for qslib"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+
+[lib]
+name = "qslib_core"
+
+[dependencies]

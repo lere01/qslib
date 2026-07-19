@@ -12,7 +12,8 @@ backend adapters, and experiments whose API may still evolve.
 
 ## Decision
 
-Core is always present in the root facade. Stable optional features are
+Core is always present in the root facade, and the default feature set is
+empty. Stable optional features are
 `exact`, `variational`, `sse`, and `io`; `full` enables all stable Rust library
 features. Python and CLI remain separate packages. Backend interop uses
 separately named, non-default adapter features.

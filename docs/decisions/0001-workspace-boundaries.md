@@ -30,6 +30,15 @@ crates:
 - `qslib-cli` owns the physicist-first executable; and
 - unpublished `qslib-test-support` owns independent fixtures and test oracles.
 
+These are conceptual crate names. Under ADR-0009, publishable Cargo package
+identifiers are `qslib-quantum-core`, `qslib-quantum-exact`,
+`qslib-quantum-variational`, `qslib-quantum-sse`, `qslib-quantum-io`,
+`qslib-quantum-python`, and `qslib-quantum-cli`. Their ergonomic Rust targets
+are respectively `qslib_core`, `qslib_exact`, `qslib_variational`,
+`qslib_sse`, `qslib_io`, `qslib_quantum`, and the `qslib` binary. The
+unpublished support package remains `qslib-test-support` with target
+`qslib_test_support`.
+
 Dependencies point from interfaces and algorithms toward `qslib-core`. Core
 must not depend on another qslib crate. The facade re-exports stable APIs under
 features and contains no second implementation. Algorithm crates do not depend

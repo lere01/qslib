@@ -17,4 +17,45 @@ categories = ["science", "simulation"]
 name = "qslib"
 path = "src/lib.rs"
 
+[workspace]
+members = [
+    ".",
+    "crates/qslib-cli",
+    "crates/qslib-core",
+    "crates/qslib-exact",
+    "crates/qslib-io",
+    "crates/qslib-python",
+    "crates/qslib-sse",
+    "crates/qslib-test-support",
+    "crates/qslib-variational",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "Apache-2.0"
+repository = "https://github.com/lere01/qslib.git"
+homepage = "https://github.com/lere01/qslib"
+publish = false
+
+[workspace.dependencies]
+blake3 = "1.8.5"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.150"
+
+[features]
+default = []
+exact = ["dep:qslib-exact"]
+variational = ["dep:qslib-variational"]
+sse = ["dep:qslib-sse"]
+io = ["dep:qslib-io"]
+full = ["exact", "variational", "sse", "io"]
+
 [dependencies]
+qslib-core = { package = "qslib-quantum-core", version = "0.1.0", path = "crates/qslib-core" }
+qslib-exact = { package = "qslib-quantum-exact", version = "0.1.0", path = "crates/qslib-exact", optional = true }
+qslib-io = { package = "qslib-quantum-io", version = "0.1.0", path = "crates/qslib-io", optional = true }
+qslib-sse = { package = "qslib-quantum-sse", version = "0.1.0", path = "crates/qslib-sse", optional = true }
+qslib-variational = { package = "qslib-quantum-variational", version = "0.1.0", path = "crates/qslib-variational", optional = true }

@@ -1,0 +1,53 @@
+{
+  "fixture_schema": "qslib-conformance-fixture-v1",
+  "convention_schema": "qslib-conventions-v1",
+  "id": "tfim_two_site_hadamard_spectrum",
+  "kind": "basis_rotation_spectrum",
+  "claim": "Hadamard rotation changes the TFIM matrix representation but preserves its physical spectrum.",
+  "oracle": {
+    "method": "explicit_unitary_similarity",
+    "source": "docs/conventions.md#248-basis-rotation-parity",
+    "source_revision": "qslib-conventions-v1-draft-2026-07-19",
+    "derivation": "Construct both four-by-four matrices from Pauli products and use the analytic eigenvalues -sqrt(2), -1, 1, sqrt(2).",
+    "independent_of_production": true
+  },
+  "authorship": { "prepared_by": "qslib specification authors", "reviewed_by": "qslib-architect", "reviewed_on": "2026-07-19" },
+  "conventions": {
+    "physical_model": "tfim",
+    "basis_masks": [0, 1, 2, 3],
+    "packed_state_endianness": "little_endian_by_site",
+    "basis_transform": "hadamard_on_every_site"
+  },
+  "comparison": { "kind": "floating_point", "dtype": "f64", "quantity": "sorted energy eigenvalues", "absolute_tolerance": 1e-12, "relative_tolerance": 1e-12, "rationale": "Analytic irrational eigenvalues are rounded to f64." },
+  "data": {
+    "site_count": 2,
+    "j": 1.0,
+    "h": 0.5,
+    "weighted_interactions": [
+      { "interaction_id": "pair:0-1:physical_zz", "sites": [0, 1], "channel": "physical_pauli_zz", "coefficient": -1.0 },
+      { "interaction_id": "site:0:physical_x", "sites": [0], "channel": "physical_pauli_x", "coefficient": -0.5 },
+      { "interaction_id": "site:1:physical_x", "sites": [1], "channel": "physical_pauli_x", "coefficient": -0.5 }
+    ],
+    "z_basis_matrix": {
+      "shape": [4, 4], "dtype": "complex_f64", "layout": "row_major",
+      "entry_definition": "entries[row,column] = <basis[row]|H|basis[column]>",
+      "entries": [
+        { "re": -1.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": 0.0, "im": 0.0 },
+        { "re": -0.5, "im": 0.0 }, { "re": 1.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 },
+        { "re": -0.5, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 1.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 },
+        { "re": 0.0, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": -0.5, "im": 0.0 }, { "re": -1.0, "im": 0.0 }
+      ]
+    },
+    "x_basis_matrix": {
+      "shape": [4, 4], "dtype": "complex_f64", "layout": "row_major",
+      "entry_definition": "entries[row,column] = <basis[row]|H|basis[column]>",
+      "entries": [
+        { "re": -1.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 },
+        { "re": 0.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 },
+        { "re": 0.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 },
+        { "re": -1.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": 1.0, "im": 0.0 }
+      ]
+    },
+    "sorted_spectrum": [-1.4142135623730951, -1.0, 1.0, 1.4142135623730951]
+  }
+}

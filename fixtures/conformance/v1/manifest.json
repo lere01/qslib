@@ -1,0 +1,16 @@
+{
+  "manifest_schema": "qslib-conformance-manifest-v1",
+  "fixture_schema": "qslib-conformance-fixture-v1",
+  "convention_schema": "qslib-conventions-v1",
+  "digest_algorithm": "blake3",
+  "entries": [
+    { "path": "basis_rotation_spectrum.json", "id": "tfim_two_site_hadamard_spectrum", "kind": "basis_rotation_spectrum", "blake3": "36d146c7c4b58ec61bb07d64e54726fe6721e0f14803eb483953e3ee0eb335dc" },
+    { "path": "bit_packing.json", "id": "bit_packing_1011", "kind": "bit_packing", "blake3": "9b363736e8df178fc26f82eef75443740fcf92c0412f0efddc6b2af561784dfc" },
+    { "path": "heisenberg_heterogeneous.json", "id": "heisenberg_three_site_pair_dependent", "kind": "heisenberg_heterogeneous", "blake3": "dd233577fa26f0b0c587b89d1946d6ca4071c92fa45e7b293aa746615dcc385b" },
+    { "path": "heisenberg_one_bond.json", "id": "heisenberg_one_bond_j2_z_basis", "kind": "heisenberg_one_bond", "blake3": "cd65aeaa495080847a39ceb81c26f95db907331349ab02d70a68e20dc7a59432" },
+    { "path": "observable_normalization.json", "id": "all_zero_z_product_observables", "kind": "observable_normalization", "blake3": "3475180626485c0536d3186c635388abb5fefa585cd1c2ab14c4ae4676e68f94" },
+    { "path": "rectangular_indexing.json", "id": "rectangular_indexing_lx3_ly2", "kind": "rectangular_indexing", "blake3": "c191776e76f27cffce4bae060dd7aa0471ca67876b9c68ed20a1e3b78d31ae63" },
+    { "path": "rydberg_two_site.json", "id": "rydberg_two_site_omega2_delta3_v5", "kind": "rydberg_two_site", "blake3": "5d6111e493f9e28f3b1a5058639749ba753355d631951eefaf88f44eb01dafe6" },
+    { "path": "tfim_one_bond.json", "id": "tfim_one_bond_j2_h0p5_z_basis", "kind": "tfim_one_bond", "blake3": "94657acd2958eeae9c1f4d8792ddb59da2b6936378187ee4e73356d56991cbe5" }
+  ]
+}

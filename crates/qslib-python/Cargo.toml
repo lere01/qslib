@@ -1,0 +1,16 @@
+[package]
+name = "qslib-quantum-python"
+description = "Python binding boundary for qslib"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+
+[lib]
+name = "qslib_quantum"
+
+[dependencies]
+qslib = { package = "qslib-quantum", version = "0.1.0", path = "../..", features = ["exact", "variational", "io"] }

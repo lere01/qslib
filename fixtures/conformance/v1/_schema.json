@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lere01/qslib/schemas/qslib-conformance-fixture-v1.json",
+  "title": "qslib neutral conformance fixture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "fixture_schema",
+    "convention_schema",
+    "id",
+    "kind",
+    "claim",
+    "oracle",
+    "authorship",
+    "conventions",
+    "comparison",
+    "data"
+  ],
+  "properties": {
+    "fixture_schema": { "const": "qslib-conformance-fixture-v1" },
+    "convention_schema": { "const": "qslib-conventions-v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "claim": { "type": "string", "minLength": 1 },
+    "kind": {
+      "enum": [
+        "rectangular_indexing",
+        "bit_packing",
+        "tfim_one_bond",
+        "heisenberg_one_bond",
+        "heisenberg_heterogeneous",
+        "rydberg_two_site",
+        "observable_normalization",
+        "basis_rotation_spectrum"
+      ]
+    },
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "source", "source_revision", "derivation", "independent_of_production"],
+      "properties": {
+        "method": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "source_revision": { "type": "string", "minLength": 1 },
+        "derivation": { "type": "string", "minLength": 1 },
+        "independent_of_production": { "const": true }
+      }
+    },
+    "authorship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prepared_by", "reviewed_by", "reviewed_on"],
+      "properties": {
+        "prepared_by": { "type": "string", "minLength": 1 },
+        "reviewed_by": { "type": "string", "minLength": 1 },
+        "reviewed_on": { "type": "string", "format": "date" }
+      }
+    },
+    "conventions": { "type": "object", "minProperties": 1 },
+    "comparison": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "quantity", "rationale"],
+          "properties": {
+            "kind": { "const": "exact" },
+            "quantity": { "type": "string", "minLength": 1 },
+            "rationale": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "dtype", "quantity", "absolute_tolerance", "relative_tolerance", "rationale"],
+          "properties": {
+            "kind": { "const": "floating_point" },
+            "dtype": { "const": "f64" },
+            "quantity": { "type": "string", "minLength": 1 },
+            "absolute_tolerance": { "type": "number", "exclusiveMinimum": 0 },
+            "relative_tolerance": { "type": "number", "minimum": 0 },
+            "rationale": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "data": { "type": "object", "minProperties": 1 }
+  }
+}

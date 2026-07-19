@@ -1,0 +1,47 @@
+{
+  "fixture_schema": "qslib-conformance-fixture-v1",
+  "convention_schema": "qslib-conventions-v1",
+  "id": "rydberg_two_site_omega2_delta3_v5",
+  "kind": "rydberg_two_site",
+  "claim": "Rydberg occupation equals the canonical bit and yields the specified detuning, interaction, and drive matrix.",
+  "oracle": {
+    "method": "occupation_number_enumeration",
+    "source": "docs/conventions.md#246-two-site-rydberg-model",
+    "source_revision": "qslib-conventions-v1-draft-2026-07-19",
+    "derivation": "Evaluate -Delta*(n0+n1) + V*n0*n1 and -Omega/2 single-site flips for all four occupations.",
+    "independent_of_production": true
+  },
+  "authorship": { "prepared_by": "qslib specification authors", "reviewed_by": "qslib-architect", "reviewed_on": "2026-07-19" },
+  "conventions": {
+    "simulation_basis": "z",
+    "rydberg_occupation": "equals_bit",
+    "basis_masks": [0, 1, 2, 3],
+    "packed_state_endianness": "little_endian_by_site"
+  },
+  "comparison": { "kind": "exact", "quantity": "Hamiltonian matrix entries", "rationale": "The selected parameters produce exactly representable integer entries." },
+  "data": {
+    "site_count": 2,
+    "omega": 2.0,
+    "detunings": [3.0, 3.0],
+    "interaction_v": 5.0,
+    "weighted_interactions": [
+      { "interaction_id": "site:0:rydberg_drive", "sites": [0], "channel": "pauli_x", "coefficient": -1.0 },
+      { "interaction_id": "site:1:rydberg_drive", "sites": [1], "channel": "pauli_x", "coefficient": -1.0 },
+      { "interaction_id": "site:0:rydberg_detuning", "sites": [0], "channel": "occupation", "coefficient": -3.0 },
+      { "interaction_id": "site:1:rydberg_detuning", "sites": [1], "channel": "occupation", "coefficient": -3.0 },
+      { "interaction_id": "pair:0-1:rydberg_interaction", "sites": [0, 1], "channel": "occupation_product", "coefficient": 5.0 }
+    ],
+    "matrix": {
+      "shape": [4, 4],
+      "dtype": "complex_f64",
+      "layout": "row_major",
+      "entry_definition": "entries[row,column] = <basis[row]|H|basis[column]>",
+      "entries": [
+        { "re": 0.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 },
+        { "re": -1.0, "im": 0.0 }, { "re": -3.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 },
+        { "re": -1.0, "im": 0.0 }, { "re": 0.0, "im": 0.0 }, { "re": -3.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 },
+        { "re": 0.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 }, { "re": -1.0, "im": 0.0 }
+      ]
+    }
+  }
+}

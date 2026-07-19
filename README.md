@@ -18,10 +18,31 @@ The living [qslib 1.0 execution plan](docs/plans/qslib-v1.md), governed by
 [`PLANS.md`](PLANS.md), defines the implementation milestones and completion
 criteria for autonomous development.
 
-The current Cargo package is an architecture scaffold. It has an explicit,
-documented `qslib` library target and still retains the original `Hello, world!`
-binary until Milestone 1 replaces the template with the approved workspace.
+The current Cargo workspace is an architecture and conformance scaffold. The
+root package exposes the `qslib` facade, while capability crates isolate core,
+exact, variational, SSE, IO, CLI, Python, and test-support responsibilities.
 No scientific API is implemented yet.
+
+## Workspace and features
+
+The default facade contains only `qslib-core`. Optional additive features are
+`exact`, `variational`, `sse`, and `io`; `full` enables all four Rust library
+capabilities. CLI and Python are separate packages, so core users do not compile
+interface or heavy-backend dependencies. Cargo package names use the
+`qslib-quantum-` prefix, while Rust library targets use concise names such as
+`qslib_core` and `qslib_exact`.
+
+The language-neutral fixtures under
+[`fixtures/conformance/v1/`](fixtures/conformance/v1/README.md) record the
+small analytic systems that later implementations must reproduce. They include
+explicit basis order, resolved coefficients, matrix layout, oracle provenance,
+comparison policy, and a checksummed manifest. Passing the current harness
+means the evidence is internally valid. It does not claim that scientific
+algorithms have already been implemented.
+
+The local CI contract is defined in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml). Remote workflow
+execution remains pending owner-authorized push activity.
 
 ## Project policies
 
