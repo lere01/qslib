@@ -181,6 +181,8 @@ name = "qslib-quantum-sse"
 version = "0.1.0"
 dependencies = [
  "qslib-quantum-core",
+ "rand_chacha",
+ "rand_core",
 ]
 
 [[package]]

@@ -133,6 +133,12 @@ commit only accepted states, derive deterministic stage seeds, expose
 accepted-only observation boundaries, and serialize checkpoint-compatible
 evolution metadata. See the [`../evolution.md`](../evolution.md) contract.
 
+Milestone 10 is migrating the standalone SSE backend onto canonical qslib
+bits, explicit weighted local terms, trace-checked operator strings, and
+sign-safe thermodynamic estimators. Legacy model adapters remain model-aware;
+the ambiguous standalone `Spin` meaning is not part of qslib. See the
+[`../sse.md`](../sse.md) contract.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:
