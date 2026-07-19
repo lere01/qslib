@@ -9,7 +9,8 @@
 #![deny(missing_docs)]
 
 use qslib_core::{
-    BasisBit, BasisError, BasisState, Complex64, Hamiltonian, OperatorError, PackedState, SiteCount,
+    BasisBit, BasisError, BasisState, Complex64, Hamiltonian, OperatorError, PackedState, Pauli,
+    PauliString, PhysicalAxis, SiteCount, SiteId,
 };
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
@@ -956,6 +957,138 @@ pub fn expectation(matrix: &DenseMatrix, state: &[Complex64]) -> Result<Complex6
     Ok(dot(state, &applied) / norm_squared)
 }
 
+/// Evaluate a Pauli-string expectation in an explicit exact basis.
+pub fn pauli_expectation(
+    operator: &PauliString,
+    basis: &ExactBasis,
+    state: &[Complex64],
+) -> Result<Complex64, ExactError> {
+    let hamiltonian = Hamiltonian::new_hermitian(
+        SiteCount::new(basis.states[0].len())?,
+        Complex64::new(0.0, 0.0),
+        vec![(Complex64::new(1.0, 0.0), operator.clone())],
+    )?;
+    let matrix = DenseMatrix::from_hamiltonian(&hamiltonian, basis)?;
+    expectation(&matrix, state)
+}
+
+/// Evaluate total and density magnetization for a Pauli axis.
+pub fn magnetization_expectation(
+    axis: PhysicalAxis,
+    basis: &ExactBasis,
+    state: &[Complex64],
+) -> Result<ObservableValue, ExactError> {
+    let pauli = match axis {
+        PhysicalAxis::X => Pauli::X,
+        PhysicalAxis::Y => Pauli::Y,
+        PhysicalAxis::Z => Pauli::Z,
+    };
+    let mut total = 0.0;
+    for site in 0..basis.states[0].len() {
+        let operator = PauliString::new(vec![(SiteId::try_from_usize(site)?, pauli)])?;
+        let value = pauli_expectation(&operator, basis, state)?;
+        if value.im.abs() > 1.0e-10 {
+            return Err(ExactError::InvalidParameter("non-real magnetization"));
+        }
+        total += value.re;
+    }
+    observable_value(total, basis.states[0].len())
+}
+
+/// Evaluate total and density spin magnetization using `S^a = sigma^a / 2`.
+pub fn spin_magnetization_expectation(
+    axis: PhysicalAxis,
+    basis: &ExactBasis,
+    state: &[Complex64],
+) -> Result<ObservableValue, ExactError> {
+    let pauli = magnetization_expectation(axis, basis, state)?;
+    observable_value(pauli.total() / 2.0, basis.states[0].len())
+}
+
+/// Evaluate a two-site Pauli correlation in an explicit exact basis.
+pub fn correlation_expectation(
+    axis: PhysicalAxis,
+    first: usize,
+    second: usize,
+    basis: &ExactBasis,
+    state: &[Complex64],
+) -> Result<Complex64, ExactError> {
+    let sites = basis.states[0].len();
+    if first >= sites || second >= sites {
+        return Err(ExactError::InvalidParameter("correlation site"));
+    }
+    if state.len() != basis.dimension() {
+        return Err(ExactError::Shape {
+            expected: basis.dimension(),
+            actual: state.len(),
+        });
+    }
+    if first == second {
+        let norm = dot(state, state).re;
+        if !norm.is_finite() || norm == 0.0 {
+            return Err(ExactError::InvalidParameter("state norm"));
+        }
+        return Ok(Complex64::new(1.0, 0.0));
+    }
+    let pauli = match axis {
+        PhysicalAxis::X => Pauli::X,
+        PhysicalAxis::Y => Pauli::Y,
+        PhysicalAxis::Z => Pauli::Z,
+    };
+    let factors = if first == second {
+        vec![(SiteId::try_from_usize(first)?, pauli)]
+    } else {
+        vec![
+            (SiteId::try_from_usize(first)?, pauli),
+            (SiteId::try_from_usize(second)?, pauli),
+        ]
+    };
+    pauli_expectation(&PauliString::new(factors)?, basis, state)
+}
+
+/// Return the stable Euclidean magnitude of three axis-resolved magnetization totals.
+pub fn magnetization_component_magnitude(components: [f64; 3]) -> Result<f64, ExactError> {
+    if components.iter().any(|component| !component.is_finite()) {
+        return Err(ExactError::InvalidParameter("spin components"));
+    }
+    let result = components[0].hypot(components[1]).hypot(components[2]);
+    if !result.is_finite() {
+        return Err(ExactError::InvalidParameter("spin components"));
+    }
+    Ok(result)
+}
+
+/// Evaluate the exact quantum observable `<S_tot^2>` in canonical site order.
+pub fn total_spin_squared(basis: &ExactBasis, state: &[Complex64]) -> Result<f64, ExactError> {
+    let sites = basis.states[0].len();
+    if state.len() != basis.dimension() {
+        return Err(ExactError::Shape {
+            expected: basis.dimension(),
+            actual: state.len(),
+        });
+    }
+    let norm = dot(state, state).re;
+    if !norm.is_finite() || norm == 0.0 {
+        return Err(ExactError::InvalidParameter("state norm"));
+    }
+    let mut result = 0.75 * sites as f64;
+    for first in 0..sites {
+        for second in (first + 1)..sites {
+            for axis in [PhysicalAxis::X, PhysicalAxis::Y, PhysicalAxis::Z] {
+                let value = correlation_expectation(axis, first, second, basis, state)?;
+                if value.im.abs() > 1.0e-10 {
+                    return Err(ExactError::InvalidParameter("non-real spin correlation"));
+                }
+                result += 0.5 * value.re;
+            }
+        }
+    }
+    if !result.is_finite() || result < -1.0e-10 {
+        return Err(ExactError::InvalidParameter("total spin squared"));
+    }
+    Ok(result.max(0.0))
+}
+
 /// Evaluate the normalized pure-state variance of a Hermitian matrix observable.
 pub fn variance(matrix: &DenseMatrix, state: &[Complex64]) -> Result<Complex64, ExactError> {
     if state.len() != matrix.dimension {
@@ -968,8 +1101,315 @@ pub fn variance(matrix: &DenseMatrix, state: &[Complex64]) -> Result<Complex64, 
     if !norm_squared.is_finite() || norm_squared == 0.0 {
         return Err(ExactError::InvalidParameter("state norm"));
     }
+    matrix.validate_hermitian(1.0e-10)?;
     let applied = matrix.apply(state)?;
-    let twice_applied = matrix.apply(&applied)?;
     let mean = dot(state, &applied) / norm_squared;
-    Ok(dot(state, &twice_applied) / norm_squared - mean * mean)
+    let centered = applied
+        .iter()
+        .zip(state)
+        .map(|(value, amplitude)| *value - mean * *amplitude)
+        .collect::<Vec<_>>();
+    let variance = dot(&centered, &centered).re / norm_squared;
+    if !variance.is_finite() {
+        return Err(ExactError::InvalidParameter("variance"));
+    }
+    if variance < -1.0e-12 {
+        return Err(ExactError::InvalidParameter("negative variance"));
+    }
+    Ok(Complex64::new(
+        if variance < 0.0 { 0.0 } else { variance },
+        0.0,
+    ))
+}
+
+/// Shannon entropy of computational-basis probabilities for a pure state.
+pub fn shannon_entropy(state: &[Complex64]) -> Result<f64, ExactError> {
+    let norm_squared = dot(state, state).re;
+    if !norm_squared.is_finite() || norm_squared == 0.0 {
+        return Err(ExactError::InvalidParameter("state norm"));
+    }
+    let mut entropy = 0.0;
+    for amplitude in state {
+        let probability = amplitude.norm_sqr() / norm_squared;
+        if probability > 0.0 {
+            entropy -= probability * probability.ln();
+        }
+    }
+    Ok(entropy)
+}
+
+/// Exact von Neumann entropy of a pure state bipartition in canonical site order.
+pub fn bipartite_entropy(state: &[Complex64], subsystem: &[usize]) -> Result<f64, ExactError> {
+    if state.is_empty() {
+        return Err(ExactError::InvalidParameter("bipartition"));
+    }
+    let sites = state.len().ilog2() as usize;
+    if sites >= usize::BITS as usize
+        || (1usize << sites) != state.len()
+        || subsystem.is_empty()
+        || subsystem.len() >= sites
+        || subsystem.iter().any(|site| *site >= sites)
+    {
+        return Err(ExactError::InvalidParameter("bipartition"));
+    }
+    let mut selected = subsystem.to_vec();
+    selected.sort_unstable();
+    selected.dedup();
+    if selected.len() != subsystem.len() {
+        return Err(ExactError::InvalidParameter("duplicate subsystem site"));
+    }
+    let environment = (0..sites)
+        .filter(|site| !selected.contains(site))
+        .collect::<Vec<_>>();
+    let subsystem_dimension = 1usize << selected.len();
+    let norm_squared = dot(state, state).re;
+    if !norm_squared.is_finite() || norm_squared == 0.0 {
+        return Err(ExactError::InvalidParameter("state norm"));
+    }
+    let mut rho = vec![Complex64::new(0.0, 0.0); subsystem_dimension * subsystem_dimension];
+    for left in 0..subsystem_dimension {
+        for right in 0..subsystem_dimension {
+            let mut value = Complex64::new(0.0, 0.0);
+            for env in 0..(1usize << environment.len()) {
+                let left_index = compose_partition_index(left, env, &selected, &environment);
+                let right_index = compose_partition_index(right, env, &selected, &environment);
+                value += state[left_index] * state[right_index].conj();
+            }
+            rho[left * subsystem_dimension + right] = value / norm_squared;
+        }
+    }
+    let spectrum = diagonalize_hermitian(&DenseMatrix::new(subsystem_dimension, rho)?)?;
+    Ok(spectrum
+        .values()
+        .iter()
+        .filter(|value| **value > 1.0e-14)
+        .map(|value| -value * value.ln())
+        .sum())
+}
+
+fn compose_partition_index(
+    subsystem_bits: usize,
+    environment_bits: usize,
+    subsystem: &[usize],
+    environment: &[usize],
+) -> usize {
+    let mut index = 0;
+    for (bit, site) in subsystem.iter().enumerate() {
+        index |= ((subsystem_bits >> bit) & 1) << site;
+    }
+    for (bit, site) in environment.iter().enumerate() {
+        index |= ((environment_bits >> bit) & 1) << site;
+    }
+    index
+}
+
+/// A convention-labelled total and per-site density.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ObservableValue {
+    total: f64,
+    density: f64,
+}
+impl ObservableValue {
+    /// Return the total observable.
+    pub fn total(&self) -> f64 {
+        self.total
+    }
+    /// Return the per-site density.
+    pub fn density(&self) -> f64 {
+        self.density
+    }
+}
+
+fn observable_value(total: f64, sites: usize) -> Result<ObservableValue, ExactError> {
+    if sites == 0 {
+        return Err(ExactError::InvalidParameter("site count"));
+    }
+    if !total.is_finite() {
+        return Err(ExactError::InvalidParameter("observable"));
+    }
+    Ok(ObservableValue {
+        total,
+        density: total / sites as f64,
+    })
+}
+
+/// Label total energy and energy density with an explicit site count.
+pub fn energy_total_density(
+    total_energy: f64,
+    sites: usize,
+) -> Result<ObservableValue, ExactError> {
+    observable_value(total_energy, sites)
+}
+
+/// Sum per-site magnetizations while retaining the physical axis label.
+pub fn magnetization_total_density(
+    axis: PhysicalAxis,
+    site_values: &[f64],
+) -> Result<(PhysicalAxis, ObservableValue), ExactError> {
+    if site_values.is_empty() || site_values.iter().any(|value| !value.is_finite()) {
+        return Err(ExactError::InvalidParameter("magnetization"));
+    }
+    Ok((
+        axis,
+        observable_value(site_values.iter().sum(), site_values.len())?,
+    ))
+}
+
+/// Return raw and connected two-point correlation for finite one-point values.
+pub fn raw_connected_correlation(
+    raw: f64,
+    one_point_a: f64,
+    one_point_b: f64,
+) -> Result<(f64, f64), ExactError> {
+    if [raw, one_point_a, one_point_b]
+        .iter()
+        .any(|value| !value.is_finite())
+    {
+        return Err(ExactError::InvalidParameter("correlation"));
+    }
+    Ok((raw, raw - one_point_a * one_point_b))
+}
+
+/// An axis-labelled structure-factor estimate and its connectedness convention.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct StructureFactor {
+    axis: PhysicalAxis,
+    value: Complex64,
+    connected: bool,
+}
+impl StructureFactor {
+    /// Return the physical spin axis used by the estimate.
+    pub fn axis(&self) -> PhysicalAxis {
+        self.axis
+    }
+    /// Return the normalized complex structure factor.
+    pub fn value(&self) -> Complex64 {
+        self.value
+    }
+    /// Return whether one-point products were subtracted.
+    pub fn connected(&self) -> bool {
+        self.connected
+    }
+}
+
+/// Compute an axis-labelled, normalized double-sum structure factor.
+pub fn structure_factor(
+    axis: PhysicalAxis,
+    positions: &[(f64, f64)],
+    q: (f64, f64),
+    correlations: &[f64],
+    one_points: Option<&[f64]>,
+) -> Result<StructureFactor, ExactError> {
+    let sites = positions.len();
+    if sites == 0
+        || sites.checked_mul(sites) != Some(correlations.len())
+        || !q.0.is_finite()
+        || !q.1.is_finite()
+        || positions
+            .iter()
+            .any(|(x, y)| !x.is_finite() || !y.is_finite())
+        || correlations.iter().any(|value| !value.is_finite())
+    {
+        return Err(ExactError::InvalidParameter("structure factor"));
+    }
+    if let Some(values) = one_points {
+        if values.len() != sites || values.iter().any(|value| !value.is_finite()) {
+            return Err(ExactError::InvalidParameter(
+                "structure-factor one-point values",
+            ));
+        }
+    }
+    let mut result = Complex64::new(0.0, 0.0);
+    for i in 0..sites {
+        for j in 0..sites {
+            let correlation = one_points.map_or(correlations[i * sites + j], |values| {
+                correlations[i * sites + j] - values[i] * values[j]
+            });
+            let phase =
+                q.0 * (positions[i].0 - positions[j].0) + q.1 * (positions[i].1 - positions[j].1);
+            result += Complex64::from_polar(correlation, phase);
+        }
+    }
+    Ok(StructureFactor {
+        axis,
+        value: result / sites as f64,
+        connected: one_points.is_some(),
+    })
+}
+
+/// Weighted sublattice moments with distinct signed, absolute, and squared outputs.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SublatticeMoments {
+    signed: f64,
+    absolute: f64,
+    squared: f64,
+}
+impl SublatticeMoments {
+    /// Return the signed per-configuration weighted moment `m_w`.
+    pub fn signed(&self) -> f64 {
+        self.signed
+    }
+    /// Return the absolute per-configuration weighted moment `|m_w|`.
+    pub fn absolute(&self) -> f64 {
+        self.absolute
+    }
+    /// Return the squared per-configuration weighted moment `m_w^2`.
+    pub fn squared(&self) -> f64 {
+        self.squared
+    }
+}
+
+/// Evaluate `m_w = sum_i w_i sigma_i^z / N` for one configuration.
+///
+/// Ensemble averages over configurations must be formed by applying the
+/// estimator to every configuration and averaging each returned component.
+pub fn sublattice_moment(
+    site_values: &[f64],
+    weights: &[f64],
+) -> Result<SublatticeMoments, ExactError> {
+    if site_values.is_empty() || site_values.len() != weights.len() {
+        return Err(ExactError::InvalidParameter("sublattice"));
+    }
+    if site_values
+        .iter()
+        .zip(weights)
+        .any(|(value, weight)| !value.is_finite() || !weight.is_finite())
+    {
+        return Err(ExactError::InvalidParameter("sublattice moment"));
+    }
+    let signed = site_values
+        .iter()
+        .zip(weights)
+        .map(|(value, weight)| value * weight)
+        .sum::<f64>()
+        / site_values.len() as f64;
+    Ok(SublatticeMoments {
+        signed,
+        absolute: signed.abs(),
+        squared: signed * signed,
+    })
+}
+
+/// Quantum Fisher information for a generator with known variance, using the
+/// Pauli-generator convention `F_Q = 4 Var(G)` and `f_Q = F_Q/N`.
+pub fn quantum_fisher_information(
+    generator_variance: f64,
+    sites: usize,
+) -> Result<ObservableValue, ExactError> {
+    if !generator_variance.is_finite() || generator_variance < 0.0 {
+        return Err(ExactError::InvalidParameter("generator variance"));
+    }
+    observable_value(4.0 * generator_variance, sites)
+}
+
+/// Thermal heat capacity and density from `beta^2 Var(H)`.
+pub fn thermal_heat_capacity(
+    beta: f64,
+    energy_variance: f64,
+    sites: usize,
+) -> Result<ObservableValue, ExactError> {
+    if !beta.is_finite() || !energy_variance.is_finite() || beta < 0.0 || energy_variance < 0.0 {
+        return Err(ExactError::InvalidParameter("thermal observable"));
+    }
+    observable_value(beta * beta * energy_variance, sites)
 }

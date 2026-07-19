@@ -108,10 +108,12 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   restarted sparse ground states, stable thermal sums, projectors, and signed
   real- and imaginary-time evolution. Architect closure review approved; the
   complete workspace quality suite and CLI ground-state gate pass.
-- [ ] In progress: Milestone 7 implements observables, online statistics,
+- [x] (2026-07-19) Completed Milestone 7: implemented observables, online statistics,
   autocorrelation diagnostics, and disorder aggregation.
-- [ ] Complete Milestone 7: implement observables, online statistics,
+- [x] Complete Milestone 7: implement observables, online statistics,
   autocorrelation diagnostics, and disorder aggregation.
+- [ ] In progress: Milestone 8 implements variational local-energy and TDVP
+  numerical kernels.
 - [ ] Complete Milestone 8: implement variational local-energy and TDVP
   numerical kernels from caller-supplied samples and derivatives.
 - [ ] Complete Milestone 9: implement transactional real- and imaginary-time
@@ -827,13 +829,23 @@ with unresolved weighted-moment, complex-statistics, autocorrelation, R-hat,
 disorder-aggregation, expectation, and variance APIs, which is the intended red
 state.
 
-Implementation record (2026-07-19): `qslib-quantum-variational` now provides
-stable weighted real and complex online moments, merge invariance,
-initial-positive-sequence autocorrelation with effective sample size, classic
-R-hat, and disorder-realization aggregation that retains identifiers and
-between-realization variance. `qslib-quantum-exact` provides normalized pure
-state expectation and variance evaluators. Focused tests are green; architect
-closure review is pending.
+Implementation record (2026-07-19): `qslib-quantum-variational` provides stable
+weighted real and complex online moments with unavailable empty-state errors,
+transactional overflow handling, merge invariance, named Geyer
+initial-positive-sequence autocorrelation with common-`N` normalization and
+effective sample size, structured classic R-hat retaining within/between
+variances, and disorder-realization records that reject duplicate IDs, retain
+fixed-realization weights, and propagate sampling uncertainty with squared
+normalized weights. `qslib-quantum-exact` provides normalized pure-state and
+direct Pauli expectations, centered-norm Hermitian variance, Shannon and
+bipartite entropy, Pauli and `S=sigma/2` magnetization, exact two-site
+correlations and `<S_tot^2>`, raw/connected correlations, labelled
+position/q-bound structure factors, weighted sublattice estimators, QFI, and
+thermal observables. Product, singlet, exact-enumeration, direct-matrix,
+analytic, boundary, overflow, and synthetic-chain tests are green. Full Rust
+1.85 workspace tests, Clippy with warnings denied, rustdoc with warnings
+denied, formatting, and diff checks pass. Architect closure review approved
+M7; M8 is now active.
 
 ### Milestone 8: variational and TDVP numerical core
 

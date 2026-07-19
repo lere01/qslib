@@ -45,3 +45,11 @@ The backend is intended for validation and small systems. It is not a claim of
 production-scale exact diagonalization; later milestones may add a maintained
 sparse solver or a qslib-owned Lanczos implementation behind a separate,
 diagnosable API.
+
+The exact observable surface also includes normalized Pauli-matrix expectation
+and variance, Shannon entropy, pure-state bipartite entropy, axis-labelled
+magnetization, raw and connected correlations, position- and momentum-bound
+structure factors, weighted sublattice moments, QFI normalization, and thermal
+heat-capacity density. These APIs bind site count, physical axis, normalization,
+and connected-correlation choice explicitly rather than accepting pre-aggregated
+scalars without provenance.

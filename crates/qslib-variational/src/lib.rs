@@ -13,6 +13,8 @@ pub enum StatisticsError {
     NonFinite(&'static str),
     /// A weight was negative or the total weight was zero.
     InvalidWeight,
+    /// Two fixed-disorder records used the same identifier.
+    DuplicateRealization,
     /// An estimator needs more samples or chains.
     InsufficientSamples,
     /// Chains have inconsistent lengths.
@@ -25,6 +27,7 @@ impl Display for StatisticsError {
             Self::InvalidWeight => {
                 f.write_str("weights must be finite and non-negative with positive total")
             }
+            Self::DuplicateRealization => f.write_str("realization identifiers must be unique"),
             Self::InsufficientSamples => {
                 f.write_str("insufficient samples for the requested estimator")
             }
@@ -65,9 +68,17 @@ impl WeightedMoments {
             return Ok(());
         }
         let total = self.weight + weight;
+        if !total.is_finite() {
+            return Err(StatisticsError::NonFinite("accumulated weight"));
+        }
         let delta = value - self.mean;
-        self.mean += delta * weight / total;
-        self.m2 += delta * delta * self.weight * weight / total;
+        let candidate_mean = self.mean + delta * weight / total;
+        let candidate_m2 = self.m2 + delta * delta * self.weight * weight / total;
+        if !candidate_m2.is_finite() || !candidate_mean.is_finite() {
+            return Err(StatisticsError::NonFinite("accumulated moments"));
+        }
+        self.mean = candidate_mean;
+        self.m2 = candidate_m2;
         self.weight = total;
         Ok(())
     }
@@ -81,22 +92,34 @@ impl WeightedMoments {
             return Ok(());
         }
         let total = self.weight + other.weight;
+        if !total.is_finite() {
+            return Err(StatisticsError::NonFinite("merged weight"));
+        }
         let delta = other.mean - self.mean;
-        self.m2 += other.m2 + delta * delta * self.weight * other.weight / total;
-        self.mean += delta * other.weight / total;
+        let candidate_m2 = self.m2 + other.m2 + delta * delta * self.weight * other.weight / total;
+        let candidate_mean = self.mean + delta * other.weight / total;
+        if !candidate_m2.is_finite() || !candidate_mean.is_finite() {
+            return Err(StatisticsError::NonFinite("merged moments"));
+        }
+        self.m2 = candidate_m2;
+        self.mean = candidate_mean;
         self.weight = total;
         Ok(())
     }
     /// Return the weighted mean.
-    pub fn mean(&self) -> f64 {
-        self.mean
+    pub fn mean(&self) -> Result<f64, StatisticsError> {
+        if self.weight == 0.0 {
+            Err(StatisticsError::InsufficientSamples)
+        } else {
+            Ok(self.mean)
+        }
     }
     /// Return the weighted population variance.
-    pub fn variance(&self) -> f64 {
+    pub fn variance(&self) -> Result<f64, StatisticsError> {
         if self.weight == 0.0 {
-            f64::NAN
+            Err(StatisticsError::InsufficientSamples)
         } else {
-            self.m2 / self.weight
+            Ok(self.m2 / self.weight)
         }
     }
     /// Return the accumulated weight.
@@ -125,16 +148,25 @@ impl ComplexWeightedMoments {
             return Err(StatisticsError::NonFinite("sample"));
         }
         validate_weight(weight)?;
-        self.real.update(value.re, weight)?;
-        self.imaginary.update(value.im, weight)
+        let mut real = self.real.clone();
+        let mut imaginary = self.imaginary.clone();
+        real.update(value.re, weight)?;
+        imaginary.update(value.im, weight)?;
+        self.real = real;
+        self.imaginary = imaginary;
+        Ok(())
     }
     /// Return the complex weighted mean.
-    pub fn mean(&self) -> Complex64 {
-        Complex64::new(self.real.mean(), self.imaginary.mean())
+    pub fn mean(&self) -> Result<Complex64, StatisticsError> {
+        Ok(Complex64::new(self.real.mean()?, self.imaginary.mean()?))
     }
     /// Return the imaginary-component variance.
-    pub fn imaginary_variance(&self) -> f64 {
+    pub fn imaginary_variance(&self) -> Result<f64, StatisticsError> {
         self.imaginary.variance()
+    }
+    /// Return the real-component variance.
+    pub fn real_variance(&self) -> Result<f64, StatisticsError> {
+        self.real.variance()
     }
 }
 
@@ -153,6 +185,7 @@ fn validate_weight(weight: f64) -> Result<(), StatisticsError> {
 pub struct AutocorrelationEstimate {
     integrated_time: f64,
     effective_sample_size: f64,
+    algorithm: &'static str,
 }
 impl AutocorrelationEstimate {
     /// Return the integrated autocorrelation time.
@@ -162,6 +195,10 @@ impl AutocorrelationEstimate {
     /// Return `N / tau_int`.
     pub fn effective_sample_size(&self) -> f64 {
         self.effective_sample_size
+    }
+    /// Return the named autocorrelation algorithm.
+    pub fn algorithm(&self) -> &'static str {
+        self.algorithm
     }
 }
 
@@ -176,40 +213,88 @@ pub fn autocorrelation(
     if samples.iter().any(|sample| !sample.is_finite()) {
         return Err(StatisticsError::NonFinite("sample"));
     }
-    let mean = samples.iter().sum::<f64>() / samples.len() as f64;
+    let sum = samples.iter().sum::<f64>();
+    if !sum.is_finite() {
+        return Err(StatisticsError::NonFinite("autocorrelation mean"));
+    }
+    let mean = sum / samples.len() as f64;
     let gamma0 = samples
         .iter()
         .map(|sample| (sample - mean).powi(2))
         .sum::<f64>()
         / samples.len() as f64;
+    if !gamma0.is_finite() {
+        return Err(StatisticsError::NonFinite("autocorrelation variance"));
+    }
     if gamma0 == 0.0 {
         return Ok(AutocorrelationEstimate {
             integrated_time: 1.0,
             effective_sample_size: samples.len() as f64,
+            algorithm: "geyer_initial_positive_sequence_common_n_tau_floor_1",
         });
     }
-    let mut tau = 1.0;
-    for lag in 1..=max_lag.min(samples.len() - 1) {
+    let mut tau = -1.0;
+    let mut lag = 0;
+    while lag < max_lag.min(samples.len() - 1) {
         let covariance = samples[..samples.len() - lag]
             .iter()
             .zip(&samples[lag..])
             .map(|(left, right)| (left - mean) * (right - mean))
             .sum::<f64>()
-            / (samples.len() - lag) as f64;
-        let rho = covariance / gamma0;
-        if rho <= 0.0 {
+            / samples.len() as f64;
+        let next_lag = lag + 1;
+        let next_covariance = samples[..samples.len() - next_lag]
+            .iter()
+            .zip(&samples[next_lag..])
+            .map(|(left, right)| (left - mean) * (right - mean))
+            .sum::<f64>()
+            / samples.len() as f64;
+        let pair = covariance + next_covariance;
+        if pair <= 0.0 {
             break;
         }
-        tau += 2.0 * rho;
+        tau += 2.0 * pair / gamma0;
+        if !tau.is_finite() {
+            return Err(StatisticsError::NonFinite("autocorrelation time"));
+        }
+        lag += 2;
     }
     Ok(AutocorrelationEstimate {
-        integrated_time: tau,
-        effective_sample_size: samples.len() as f64 / tau,
+        integrated_time: tau.max(1.0),
+        effective_sample_size: samples.len() as f64 / tau.max(1.0),
+        algorithm: "geyer_initial_positive_sequence_common_n_tau_floor_1",
     })
 }
 
+/// Named split-free classic Gelman-Rubin diagnostic for equal-length chains.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RHatDiagnostic {
+    value: f64,
+    within_chain: f64,
+    between_chain: f64,
+    algorithm: &'static str,
+}
+impl RHatDiagnostic {
+    /// Return R-hat.
+    pub fn value(&self) -> f64 {
+        self.value
+    }
+    /// Return within-chain variance `W`.
+    pub fn within_chain_variance(&self) -> f64 {
+        self.within_chain
+    }
+    /// Return between-chain variance `B`.
+    pub fn between_chain_variance(&self) -> f64 {
+        self.between_chain
+    }
+    /// Return the named algorithm.
+    pub fn algorithm(&self) -> &'static str {
+        self.algorithm
+    }
+}
+
 /// Estimate split-free classic Gelman-Rubin R-hat for equal-length chains.
-pub fn r_hat(chains: &[Vec<f64>]) -> Result<f64, StatisticsError> {
+pub fn r_hat(chains: &[Vec<f64>]) -> Result<RHatDiagnostic, StatisticsError> {
     if chains.len() < 2 || chains.iter().any(|chain| chain.len() < 2) {
         return Err(StatisticsError::InsufficientSamples);
     }
@@ -224,7 +309,13 @@ pub fn r_hat(chains: &[Vec<f64>]) -> Result<f64, StatisticsError> {
         .iter()
         .map(|chain| chain.iter().sum::<f64>() / length as f64)
         .collect::<Vec<_>>();
+    if means.iter().any(|mean| !mean.is_finite()) {
+        return Err(StatisticsError::NonFinite("chain mean"));
+    }
     let grand = means.iter().sum::<f64>() / means.len() as f64;
+    if !grand.is_finite() {
+        return Err(StatisticsError::NonFinite("grand mean"));
+    }
     let within = chains
         .iter()
         .map(|chain| {
@@ -239,22 +330,35 @@ pub fn r_hat(chains: &[Vec<f64>]) -> Result<f64, StatisticsError> {
         / chains.len() as f64;
     let between = length as f64 * means.iter().map(|mean| (mean - grand).powi(2)).sum::<f64>()
         / (means.len() - 1) as f64;
-    if within == 0.0 {
-        return Ok(if between == 0.0 { 1.0 } else { f64::INFINITY });
+    if !within.is_finite() || !between.is_finite() {
+        return Err(StatisticsError::NonFinite("R-hat variance"));
     }
-    Ok(
-        (((length - 1) as f64 / length as f64 * within + between / length as f64) / within)
+    if within == 0.0 {
+        return Ok(RHatDiagnostic {
+            value: if between == 0.0 { 1.0 } else { f64::INFINITY },
+            within_chain: within,
+            between_chain: between,
+            algorithm: "gelman_rubin_classic_equal_length",
+        });
+    }
+    Ok(RHatDiagnostic {
+        value: (((length - 1) as f64 / length as f64 * within + between / length as f64) / within)
             .sqrt()
             .max(1.0),
-    )
+        within_chain: within,
+        between_chain: between,
+        algorithm: "gelman_rubin_classic_equal_length",
+    })
 }
 
 /// Weighted disorder-realization summary retaining identifiers and ensemble spread.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DisorderSummary {
     realization_ids: Vec<String>,
+    records: Vec<RealizationEstimate>,
     mean: f64,
-    between_realization_variance: f64,
+    between_realization_variance: Option<f64>,
+    sampling_variance: Option<f64>,
 }
 impl DisorderSummary {
     /// Return the weighted realization mean.
@@ -262,12 +366,71 @@ impl DisorderSummary {
         self.mean
     }
     /// Return weighted between-realization population variance.
-    pub fn between_realization_variance(&self) -> f64 {
+    pub fn between_realization_variance(&self) -> Option<f64> {
         self.between_realization_variance
     }
     /// Return realization identifiers in input order.
     pub fn realizations(&self) -> &[String] {
         &self.realization_ids
+    }
+    /// Return the retained fixed-realization estimates.
+    pub fn records(&self) -> &[RealizationEstimate] {
+        &self.records
+    }
+    /// Return weighted within-realization sampling variance when supplied.
+    pub fn sampling_variance(&self) -> Option<f64> {
+        self.sampling_variance
+    }
+}
+
+/// One fixed-disorder estimate with optional within-realization sampling variance.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RealizationEstimate {
+    id: String,
+    mean: f64,
+    weight: f64,
+    sampling_variance: Option<f64>,
+}
+impl RealizationEstimate {
+    /// Construct a fixed-realization estimate.
+    pub fn new(
+        id: impl Into<String>,
+        mean: f64,
+        weight: f64,
+        sampling_variance: Option<f64>,
+    ) -> Result<Self, StatisticsError> {
+        let id = id.into();
+        if id.is_empty() {
+            return Err(StatisticsError::InsufficientSamples);
+        }
+        if !mean.is_finite()
+            || sampling_variance.is_some_and(|value| !value.is_finite() || value < 0.0)
+        {
+            return Err(StatisticsError::NonFinite("realization estimate"));
+        }
+        validate_weight(weight)?;
+        Ok(Self {
+            id,
+            mean,
+            weight,
+            sampling_variance,
+        })
+    }
+    /// Return realization ID.
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+    /// Return fixed-realization mean.
+    pub fn mean(&self) -> f64 {
+        self.mean
+    }
+    /// Return aggregation weight.
+    pub fn weight(&self) -> f64 {
+        self.weight
+    }
+    /// Return optional within-realization sampling variance.
+    pub fn sampling_variance(&self) -> Option<f64> {
+        self.sampling_variance
     }
 }
 
@@ -278,24 +441,60 @@ pub fn disorder_average(
     if realizations.is_empty() {
         return Err(StatisticsError::InsufficientSamples);
     }
+    let records = realizations
+        .iter()
+        .map(|(id, mean, weight)| RealizationEstimate::new(*id, *mean, *weight, None))
+        .collect::<Result<Vec<_>, _>>()?;
+    disorder_average_with_uncertainty(&records)
+}
+
+/// Aggregate retained realization records with separate within-realization uncertainty.
+pub fn disorder_average_with_uncertainty(
+    records: &[RealizationEstimate],
+) -> Result<DisorderSummary, StatisticsError> {
+    if records.is_empty() {
+        return Err(StatisticsError::InsufficientSamples);
+    }
+    for (index, record) in records.iter().enumerate() {
+        if records[..index]
+            .iter()
+            .any(|previous| previous.id == record.id)
+        {
+            return Err(StatisticsError::DuplicateRealization);
+        }
+    }
     let mut moments = WeightedMoments::new()?;
-    for (_, value, weight) in realizations {
-        moments.update(*value, *weight)?;
+    for record in records {
+        moments.update(record.mean, record.weight)?;
     }
     if moments.weight() == 0.0 {
         return Err(StatisticsError::InvalidWeight);
     }
-    let variance = realizations
-        .iter()
-        .map(|(_, value, weight)| weight * (*value - moments.mean()).powi(2))
-        .sum::<f64>()
-        / moments.weight();
-    Ok(DisorderSummary {
-        realization_ids: realizations
+    let mean = moments.mean()?;
+    let positive_records = records.iter().filter(|record| record.weight > 0.0);
+    let positive: Vec<_> = positive_records.collect();
+    let variance = (positive.len() >= 2)
+        .then(|| moments.variance())
+        .transpose()?;
+    let sampling_variance = (!positive.is_empty()
+        && positive
             .iter()
-            .map(|(id, _, _)| (*id).to_string())
-            .collect(),
-        mean: moments.mean(),
+            .all(|record| record.sampling_variance.is_some()))
+    .then(|| {
+        let total_weight = positive.iter().map(|record| record.weight).sum::<f64>();
+        positive
+            .iter()
+            .map(|record| {
+                let normalized = record.weight / total_weight;
+                normalized * normalized * record.sampling_variance.unwrap_or(0.0)
+            })
+            .sum::<f64>()
+    });
+    Ok(DisorderSummary {
+        realization_ids: records.iter().map(|record| record.id.clone()).collect(),
+        records: records.to_vec(),
+        mean,
         between_realization_variance: variance,
+        sampling_variance,
     })
 }

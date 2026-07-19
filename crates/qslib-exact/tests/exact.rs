@@ -429,3 +429,142 @@ fn exact_expectation_and_variance_match_direct_matrix_evaluation() {
     assert!(qslib_exact::expectation(&matrix, &state).unwrap().norm() < 1.0e-12);
     assert!((qslib_exact::variance(&matrix, &state).unwrap().re - 1.0).abs() < 1.0e-12);
 }
+
+#[test]
+fn variance_rejects_nonhermitian_matrix_instead_of_returning_cancellation_noise() {
+    let matrix = qslib_exact::DenseMatrix::new(1, vec![Complex64::new(0.0, 1.0)]).unwrap();
+    assert!(qslib_exact::variance(&matrix, &[Complex64::new(1.0, 0.0)]).is_err());
+}
+
+#[test]
+fn convention_explicit_observable_definitions_keep_totals_densities_and_axes_distinct() {
+    let energy = qslib_exact::energy_total_density(-6.0, 3).unwrap();
+    assert_eq!((energy.total(), energy.density()), (-6.0, -2.0));
+    let (axis, magnetization) =
+        qslib_exact::magnetization_total_density(qslib_core::PhysicalAxis::Z, &[1.0, -1.0, 1.0])
+            .unwrap();
+    assert_eq!(axis, qslib_core::PhysicalAxis::Z);
+    assert_eq!(magnetization.total(), 1.0);
+    let (raw, connected) = qslib_exact::raw_connected_correlation(0.5, 0.5, -0.5).unwrap();
+    assert_eq!((raw, connected), (0.5, 0.75));
+    assert_eq!(
+        qslib_exact::quantum_fisher_information(0.25, 2)
+            .unwrap()
+            .total(),
+        1.0
+    );
+    assert_eq!(
+        qslib_exact::thermal_heat_capacity(2.0, 0.5, 2)
+            .unwrap()
+            .density(),
+        1.0
+    );
+    let sublattice =
+        qslib_exact::sublattice_moment(&[1.0, -1.0, 1.0, -1.0], &[1.0, -1.0, 1.0, -1.0]).unwrap();
+    assert_eq!(
+        (
+            sublattice.signed(),
+            sublattice.absolute(),
+            sublattice.squared()
+        ),
+        (1.0, 1.0, 1.0)
+    );
+    let structure = qslib_exact::structure_factor(
+        qslib_core::PhysicalAxis::Z,
+        &[(0.0, 0.0), (1.0, 0.0)],
+        (0.0, 0.0),
+        &[1.0, 0.5, 0.5, 1.0],
+        None,
+    )
+    .unwrap();
+    assert_eq!(structure.axis(), qslib_core::PhysicalAxis::Z);
+    assert!(!structure.connected());
+    assert_eq!(structure.value(), Complex64::new(1.5, 0.0));
+    assert!(qslib_exact::quantum_fisher_information(-0.25, 2).is_err());
+}
+
+#[test]
+fn pauli_magnetization_and_total_spin_match_direct_matrix_values() {
+    let basis = ExactBasis::full(SiteCount::new(1).unwrap()).unwrap();
+    let state = vec![Complex64::new(1.0, 0.0), Complex64::new(0.0, 0.0)];
+    let z = PauliString::new(vec![(SiteId::new(0), Pauli::Z)]).unwrap();
+    assert_eq!(
+        qslib_exact::pauli_expectation(&z, &basis, &state).unwrap(),
+        Complex64::new(1.0, 0.0)
+    );
+    let magnetization =
+        qslib_exact::magnetization_expectation(qslib_core::PhysicalAxis::Z, &basis, &state)
+            .unwrap();
+    assert_eq!((magnetization.total(), magnetization.density()), (1.0, 1.0));
+    assert_eq!(
+        qslib_exact::magnetization_component_magnitude([1.0, 0.0, 0.0]).unwrap(),
+        1.0
+    );
+    assert!(qslib_exact::magnetization_component_magnitude([f64::MAX, f64::MAX, 0.0]).is_err());
+}
+
+#[test]
+fn product_singlet_and_enumerated_entropy_observables_match_analytic_values() {
+    let product = [
+        Complex64::new(1.0, 0.0),
+        Complex64::new(0.0, 0.0),
+        Complex64::new(0.0, 0.0),
+        Complex64::new(0.0, 0.0),
+    ];
+    assert!(qslib_exact::shannon_entropy(&product).unwrap().abs() < 1.0e-12);
+    assert!(
+        qslib_exact::bipartite_entropy(&product, &[0])
+            .unwrap()
+            .abs()
+            < 1.0e-12
+    );
+    let singlet = [
+        Complex64::new(0.0, 0.0),
+        Complex64::new(2.0_f64.sqrt().recip(), 0.0),
+        Complex64::new(-2.0_f64.sqrt().recip(), 0.0),
+        Complex64::new(0.0, 0.0),
+    ];
+    assert!(
+        (qslib_exact::bipartite_entropy(&singlet, &[0]).unwrap() - 2.0_f64.ln()).abs() < 1.0e-12
+    );
+    let basis = ExactBasis::full(SiteCount::new(2).unwrap()).unwrap();
+    let zz =
+        qslib_exact::correlation_expectation(qslib_core::PhysicalAxis::Z, 0, 1, &basis, &singlet)
+            .unwrap();
+    assert!((zz.re + 1.0).abs() < 1.0e-12);
+    assert_eq!(
+        qslib_exact::correlation_expectation(qslib_core::PhysicalAxis::Z, 0, 0, &basis, &singlet,)
+            .unwrap(),
+        Complex64::new(1.0, 0.0)
+    );
+    assert!(
+        qslib_exact::total_spin_squared(&basis, &singlet)
+            .unwrap()
+            .abs()
+            < 1.0e-12
+    );
+    let one_basis = ExactBasis::full(SiteCount::new(1).unwrap()).unwrap();
+    let one_state = [Complex64::new(1.0, 0.0), Complex64::new(0.0, 0.0)];
+    assert_eq!(
+        qslib_exact::spin_magnetization_expectation(
+            qslib_core::PhysicalAxis::Z,
+            &one_basis,
+            &one_state,
+        )
+        .unwrap()
+        .total(),
+        0.5
+    );
+    assert!(
+        (qslib_exact::total_spin_squared(&one_basis, &one_state).unwrap() - 0.75).abs() < 1.0e-12
+    );
+    assert!(qslib_exact::total_spin_squared(&one_basis, &[Complex64::new(1.0, 0.0)]).is_err());
+}
+
+#[test]
+fn bipartite_entropy_rejects_empty_non_power_of_two_and_duplicate_subsystems() {
+    assert!(qslib_exact::bipartite_entropy(&[], &[0]).is_err());
+    assert!(qslib_exact::bipartite_entropy(&[Complex64::new(1.0, 0.0); 3], &[0]).is_err());
+    let state = vec![Complex64::new(1.0, 0.0); 4];
+    assert!(qslib_exact::bipartite_entropy(&state, &[0, 0]).is_err());
+}
