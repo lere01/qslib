@@ -498,44 +498,36 @@ pub fn diagonalize_hermitian(matrix: &DenseMatrix) -> Result<Eigensystem, ExactE
             let mut values = Vec::with_capacity(n);
             let mut complex_vectors = Vec::with_capacity(n);
             let mut cursor = 0;
-            while cursor < pairs.len() {
-                let group_value = pairs[cursor].0;
-                let mut end = cursor + 1;
-                while end < pairs.len()
-                    && (pairs[end].0 - group_value).abs()
-                        <= 1.0e-13 * group_value.abs().max(pairs[end].0.abs()).max(1.0)
-                {
-                    end += 1;
-                }
-                let target = (end - cursor) / 2;
-                let mut group_vectors = Vec::new();
+            while cursor < pairs.len() && values.len() < n {
+                let end = (cursor + 2).min(pairs.len());
+                let physical_value = pairs[cursor].0 + (pairs[end - 1].0 - pairs[cursor].0) / 2.0;
                 for (_, index) in &pairs[cursor..end] {
                     let candidate = (0..n)
                         .map(|site| {
                             Complex64::new(vectors[*index][site], vectors[*index][site + n])
                         })
                         .collect::<Vec<_>>();
-                    if let Some(vector) = orthonormalize(candidate, &group_vectors) {
-                        group_vectors.push(vector);
-                    }
-                    if group_vectors.len() == target {
+                    if let Some(vector) = orthonormalize(candidate, &complex_vectors) {
+                        values.push(physical_value);
+                        complex_vectors.push(vector);
                         break;
                     }
                 }
-                if group_vectors.len() != target {
-                    return Err(ExactError::InvalidParameter("degenerate eigenbasis"));
-                }
-                for vector in group_vectors {
-                    values.push(group_value);
-                    complex_vectors.push(vector);
-                }
                 cursor = end;
+            }
+            if values.len() != n {
+                return Err(ExactError::InvalidParameter("degenerate eigenbasis"));
             }
             let residuals = complex_vectors
                 .iter()
                 .zip(values.iter())
                 .map(|(vector, value)| residual_norm(matrix, vector, *value))
                 .collect::<Result<Vec<_>, _>>()?;
+            if residuals.iter().any(|residual| *residual > 1.0e-8) {
+                return Err(ExactError::NonConvergent {
+                    iterations: iteration,
+                });
+            }
             return Ok(Eigensystem {
                 values,
                 vectors: complex_vectors,

@@ -165,6 +165,22 @@ fn degenerate_zero_spectrum_is_complete_orthonormal_and_has_identity_projector()
 }
 
 #[test]
+fn nearby_distinct_eigenvalues_are_not_collapsed_as_a_degeneracy() {
+    let matrix = qslib_exact::DenseMatrix::new(
+        2,
+        vec![
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(5.0e-14, 0.0),
+        ],
+    )
+    .unwrap();
+    let spectrum = diagonalize_hermitian(&matrix).unwrap();
+    assert_eq!(spectrum.values(), &[0.0, 5.0e-14]);
+}
+
+#[test]
 fn thermal_sum_and_unitary_or_imaginary_evolution_match_analytic_values() {
     let h = two_level();
     let basis = ExactBasis::full(SiteCount::new(1).unwrap()).unwrap();
