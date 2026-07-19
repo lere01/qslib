@@ -93,6 +93,9 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   conversion, weighted interactions, dense/sparse coupling validation, named
   terms, and ADR-0003 disorder provenance. Architect closure review approved;
   Rust 1.85 and stable workspace quality checks pass.
+- Observation: the exact staged M3 tree at commit `d0d68f8` was reconstructed
+  under `/private/tmp/qslib-m3-candidate.*` and its complete workspace test
+  suite passed on Rust 1.85 without relying on the working tree.
 - [ ] In progress: Milestone 4 implements operators, Hamiltonians, and canonical
   model constructors.
 - [ ] Complete Milestone 5: implement symmetry groups, actions, sectors, and
