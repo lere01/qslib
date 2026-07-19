@@ -81,8 +81,14 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   strict checksummed neutral fixtures, and an independent conformance and
   dependency-boundary harness. Rust 1.85 and stable checks, docs, feature
   combinations, cargo-deny, and all eight harness tests pass locally.
-- [ ] Complete Milestone 2: implement scalar policy, identifiers, basis states,
-  sectors, and deterministic packing.
+- [x] (2026-07-19 18:20Z) Completed Milestone 2: implemented checked site
+  identifiers and counts, distinct physical and simulation axes, explicit
+  binary states and views, multiword little-endian packed states, width-
+  labelled byte serialization, reference scalar aliases and finite checks,
+  full-basis iteration, and fixed-Hamming-weight sectors. Seven focused core
+  tests plus the complete workspace quality suite pass on Rust 1.85 and stable.
+- [ ] Complete Milestone 3: implement geometry, boundaries, bonds, weighted
+  interactions, and disorder realizations.
 - [ ] Complete Milestone 3: implement geometry, boundaries, bonds, weighted
   interactions, and disorder realizations.
 - [ ] Complete Milestone 4: implement operators, Hamiltonians, and canonical
@@ -187,6 +193,21 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   tests, rustdoc, metadata, license/source policy, links, agent metadata, and
   text-policy checks passed. A fresh local clone at commit `9c7cda5` was clean
   and passed both workspace test suites.
+- Observation: packed-state serialization can remain independent of machine
+  storage width when the serialized word width is explicit.
+  Evidence: M2 round-trips the same four-site state through U8, U16, U32, and
+  U64 words and round-trips a 65-site state through two U64 words, rejecting
+  nonzero padding and exact-length mismatches.
+- Observation: a generic fixed-weight iterator preserves increasing packed
+  integer order without eagerly materializing a sector.
+  Evidence: the iterator advances a checked ascending position list and passes
+  the independent N=4,K=2 vector `[3, 5, 6, 9, 10, 12]`, including K=0 and K=N.
+- Observation: the initial M2 implementation review exposed portability and
+  panic risks that focused tests alone did not reveal.
+  Evidence: the architect review required checked full-basis dimensions,
+  overflow-safe serialized offsets, a non-lossy large-index error, a dense
+  borrowed view, and removal of an internal iterator `expect`; all are now
+  covered by the implementation and quality checks.
 - Observation: a tree reconstructed solely from the Git index is sufficient to
   expose missing untracked governance or agent files before the first commit.
   Evidence: `git checkout-index --all` produced an isolated candidate under
@@ -297,6 +318,15 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   Python, and future backends without depending on production implementation.
   Date/author: 2026-07-19, primary agent after qslib-architect and conformance
   review.
+- Decision: keep core basis serialization explicit and width-labelled without
+  deriving durable Serde layouts, keep model-specific occupation aliases out
+  of generic `BasisBit`, and expose concrete `Real`, `Complex64`, and finite
+  scalar validation helpers.
+  Rationale: ADR-0004 assigns durable schemas to `qslib-io`; explicit bytes
+  preserve little-endian semantics without accidental schema promises. Generic
+  zero/one values remain distinct from Rydberg occupation and legacy spin
+  labels, while numerical code has one reference scalar policy.
+  Date/author: 2026-07-19, primary agent after qslib-architect review.
 
 ## Outcomes and retrospective
 
@@ -319,8 +349,18 @@ unsupported conventions, missing provenance, malformed matrices, non-finite
 values, duplicate identities, wrong checksums, and incomplete fixture sets.
 Linux, macOS, and Windows workflow definitions are authored and action-pinned;
 their remote execution remains a later owner-authorized CI observation because
-push and pull remain prohibited. Milestone 2 starts with failing public tests
-for checked identifiers, basis states, and deterministic packing.
+push and pull remain prohibited. Milestone 2 then started with failing public
+tests for checked identifiers, basis states, and deterministic packing.
+
+Milestone 2 is now complete. Core users can construct and validate non-empty
+systems, distinguish physical axes from the simulation basis, inspect dense
+binary states, pack arbitrary supported site counts little-endian by site,
+serialize with an explicit word width, enumerate the full basis, and enumerate
+fixed-occupation sectors deterministically. Invalid bits, empty systems,
+out-of-range sites, non-canonical high bits, wrong byte lengths, overflowed
+dimensions, non-finite scalars, and invalid sector weights return structured
+errors. Milestone 3 starts with failing tests for geometry, boundaries,
+canonical bonds, pair-dependent interactions, and disorder provenance.
 
 ## Context and orientation
 

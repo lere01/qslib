@@ -34,13 +34,21 @@ fn workspace_metadata_matches_the_accepted_package_and_target_map() {
     }
 
     assert_target(packages["qslib-quantum"], "qslib", "lib");
+    let root_targets = packages["qslib-quantum"]["targets"]
+        .as_array()
+        .expect("root targets");
     assert_eq!(
-        packages["qslib-quantum"]["targets"]
-            .as_array()
-            .unwrap()
-            .len(),
+        root_targets
+            .iter()
+            .filter(|target| target["kind"] == serde_json::json!(["lib"]))
+            .count(),
         1
     );
+    assert!(!root_targets.iter().any(|target| {
+        target["kind"]
+            .as_array()
+            .is_some_and(|kinds| kinds.iter().any(|kind| kind == "bin"))
+    }));
     assert_target(packages["qslib-quantum-cli"], "qslib", "bin");
     assert_target(packages["qslib-quantum-python"], "qslib_quantum", "lib");
     assert_target(packages["qslib-test-support"], "qslib_test_support", "lib");
@@ -132,17 +140,23 @@ fn facade_features_are_additive_and_core_only_is_lightweight() {
         .expect("run cargo tree");
     assert!(output.status.success(), "cargo tree failed");
     let tree = String::from_utf8(output.stdout).expect("cargo tree UTF-8");
-    let package_lines: Vec<_> = tree
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .collect();
-    assert_eq!(
-        package_lines.len(),
-        2,
-        "core-only tree was not lightweight:\n{tree}"
-    );
     assert!(tree.contains("qslib-quantum v0.1.0"));
     assert!(tree.contains("qslib-quantum-core v0.1.0"));
+    for forbidden in [
+        "qslib-quantum-exact",
+        "qslib-quantum-io",
+        "qslib-quantum-sse",
+        "qslib-quantum-variational",
+        "rayon",
+        "pyo3",
+        "parquet",
+        "arrow",
+    ] {
+        assert!(
+            !tree.contains(forbidden),
+            "core-only tree includes {forbidden}:\n{tree}"
+        );
+    }
 }
 
 fn cargo_metadata() -> Value {

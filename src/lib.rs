@@ -10,6 +10,7 @@
 
 /// Foundational scientific types shared by every qslib algorithm.
 pub use qslib_core as core;
+pub use qslib_core::*;
 
 #[cfg(feature = "exact")]
 /// Exact-basis and exact-solver capabilities.

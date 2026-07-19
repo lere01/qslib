@@ -13,3 +13,4 @@ publish.workspace = true
 name = "qslib_core"
 
 [dependencies]
+num-complex.workspace = true
