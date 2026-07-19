@@ -6,8 +6,10 @@
 use qslib_core::Complex64;
 use std::fmt::{self, Display, Formatter};
 
+mod evolution;
 mod tdvp;
 
+pub use evolution::*;
 pub use tdvp::*;
 
 /// Errors from weighted statistics and chain diagnostics.

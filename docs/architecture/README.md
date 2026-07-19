@@ -127,6 +127,12 @@ gradient solves, fixed Tikhonov, GCV, spectral cutoffs, clipping, and residual
 diagnostics. Neural-network derivative evaluation remains outside the Rust
 kernel boundary. See the [`../tdvp.md`](../tdvp.md) contract.
 
+Milestone 9 adds transactional Euler and Heun evolution over checked flat
+parameter state. Adaptive attempts use explicit Euclidean or QGT error metrics,
+commit only accepted states, derive deterministic stage seeds, expose
+accepted-only observation boundaries, and serialize checkpoint-compatible
+evolution metadata. See the [`../evolution.md`](../evolution.md) contract.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:
