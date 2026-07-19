@@ -87,11 +87,13 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   labelled byte serialization, reference scalar aliases and finite checks,
   full-basis iteration, and fixed-Hamming-weight sectors. Seven focused core
   tests plus the complete workspace quality suite pass on Rust 1.85 and stable.
-- [ ] Complete Milestone 3: implement geometry, boundaries, bonds, weighted
-  interactions, and disorder realizations.
-- [ ] Complete Milestone 3: implement geometry, boundaries, bonds, weighted
-  interactions, and disorder realizations.
-- [ ] Complete Milestone 4: implement operators, Hamiltonians, and canonical
+- [x] (2026-07-19 18:52Z) Completed Milestone 3: implemented checked
+  rectangular and triangular geometry, boundaries, minimum-image shells,
+  simple and periodic-image bonds, custom coordinates, explicit x-major
+  conversion, weighted interactions, dense/sparse coupling validation, named
+  terms, and ADR-0003 disorder provenance. Architect closure review approved;
+  Rust 1.85 and stable workspace quality checks pass.
+- [ ] In progress: Milestone 4 implements operators, Hamiltonians, and canonical
   model constructors.
 - [ ] Complete Milestone 5: implement symmetry groups, actions, sectors, and
   projection utilities.
@@ -364,8 +366,10 @@ serialize with an explicit word width, enumerate the full basis, and enumerate
 fixed-occupation sectors deterministically. Invalid bits, empty systems,
 out-of-range sites, non-canonical high bits, wrong byte lengths, overflowed
 dimensions, non-finite scalars, and invalid sector weights return structured
-errors. Milestone 3 starts with failing tests for geometry, boundaries,
-canonical bonds, pair-dependent interactions, and disorder provenance.
+errors. Milestone 3 is complete: its red-to-green tests cover geometry,
+boundaries, canonical bonds, pair-dependent interactions, disorder provenance,
+parity adapters, and anisotropic closest-vector cases. Milestone 4 now starts
+with operator channels, Hamiltonian term assembly, and model constructors.
 
 ## Context and orientation
 
@@ -635,6 +639,38 @@ The gate passes when both modern ncli row-major fixtures and canonical SSE
 geometry cases agree after explicit conversion, while the legacy x-major path
 fails without its named adapter and succeeds with it. Persisted disorder tables
 must reproduce without access to the generating RNG.
+
+Execution record (2026-07-19): the initial M3 acceptance tests were added before
+production implementation. The focused Rust 1.85 run failed at compilation with
+unresolved public geometry and interaction types, which is the intended red
+state for this test-first transition. The tests independently specify row-major
+rectangular and triangular coordinates, mixed boundaries, periodic-image
+multiplicity, canonical weighted terms, duplicate rejection, dense/sparse
+coupling parity, and scheduling-independent disorder realization.
+
+Implementation record (2026-07-19): M3 production behavior is now present in
+`qslib-core`. Geometry retains explicit periodic-image identity while simple
+bonds are endpoint-only; extent-one periodic steps are skipped as self-bonds;
+triangular minimum-image selection derives a cell-local closest-vector search
+from the actual cell dimensions; shells use a typed absolute or relative
+tolerance; and `XMajorAdapter` is the only legacy-order conversion. Interaction
+tables preserve named terms and zero-coefficient provenance while exposing an
+active numerical view. Dense and sparse coupling constructors validate finite
+values, shape, symmetry, diagonals, duplicates, and canonical ordering.
+Disorder uses keyed BLAKE3 `qslib-seed-v1` framing and `ChaCha20`, with logical
+realization index and structured provenance. Focused geometry, interaction, and
+neutral modern-row-major/SSE parity tests are green on Rust 1.85 and stable;
+workspace Clippy, tests, rustdoc, and cargo-deny license/source/advisory checks
+also pass offline or against the approved local advisory cache.
+
+The final M3 corrections are now implemented: triangular minimum-image search
+uses a norm-derived complete candidate interval, ADR-0003 seed framing is exact
+(`qslib-seed-v1` plus the required zero byte, u32 domain and index framing), and
+all fields participating in periodic-image identity feed a canonical identity
+fingerprint. Pinned seed and anisotropic closest-vector tests are green, and
+the current architect re-audit is the remaining closure check. Milestone 4
+will begin with operator channels and Hamiltonian term assembly only after that
+gate closes.
 
 ### Milestone 4: operators, Hamiltonians, and models
 

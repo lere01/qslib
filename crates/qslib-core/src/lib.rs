@@ -9,12 +9,22 @@
 
 mod basis;
 mod error;
+mod geometry;
 mod identifiers;
+mod interactions;
 mod scalar;
 
 pub use basis::{
     BasisBit, BasisState, BasisStateView, FullBasis, PackedState, SectorBasis, WordWidth,
 };
 pub use error::BasisError;
+pub use geometry::{
+    Bond, BondMultiplicity, Boundary, Coordinate, CustomGeometry, GeometryError, LatticeKind,
+    RectangularGeometry, ShellTolerance, XMajorAdapter,
+};
 pub use identifiers::{PhysicalAxis, SimulationBasis, SiteCount, SiteId};
+pub use interactions::{
+    DenseCouplings, DisorderProvenance, DisorderRealization, InteractionChannel, InteractionError,
+    InteractionIdentity, InteractionTable, SparseCouplings, WeightedInteraction,
+};
 pub use scalar::{Complex64, Real, ensure_finite};

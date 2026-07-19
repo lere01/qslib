@@ -18,10 +18,12 @@ The living [qslib 1.0 execution plan](docs/plans/qslib-v1.md), governed by
 [`PLANS.md`](PLANS.md), defines the implementation milestones and completion
 criteria for autonomous development.
 
-The current Cargo workspace is an architecture and conformance scaffold. The
-root package exposes the `qslib` facade, while capability crates isolate core,
-exact, variational, SSE, IO, CLI, Python, and test-support responsibilities.
-No scientific API is implemented yet.
+The current Cargo workspace exposes the `qslib` facade, while capability crates
+isolate core, exact, variational, SSE, IO, CLI, Python, and test-support
+responsibilities. The core crate now implements the checked basis, geometry,
+weighted-interaction, and disorder foundations described by the completed
+Milestones 2 and 3. Model assembly and numerical algorithms remain later
+milestones.
 
 ## Workspace and features
 
@@ -43,6 +45,10 @@ algorithms have already been implemented.
 The local CI contract is defined in
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Remote workflow
 execution remains pending owner-authorized push activity.
+
+For a physicist-first introduction to site order, boundaries, pair-dependent
+couplings, and disorder provenance, see the
+[geometry and interactions guide](docs/geometry-interactions.md).
 
 ## Project policies
 

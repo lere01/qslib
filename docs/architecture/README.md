@@ -89,6 +89,15 @@ separate packages.
   internals and the isolated Python FFI boundary follow their own audited
   policies.
 
+Milestone 3 now supplies the foundational geometry and interaction boundary in
+`qslib-core`: checked row-major rectangular and triangular coordinates, mixed
+open/periodic directions, minimum-image shells, explicit periodic-image bond
+identity, custom coordinate order, canonical x-major conversion, dense or
+sparse pair couplings, named weighted terms, and deterministic disorder
+provenance. The user-facing physical explanation is in
+[`../geometry-interactions.md`](../geometry-interactions.md). Model assembly,
+Hamiltonian action, and interoperability adapters remain downstream layers.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:
