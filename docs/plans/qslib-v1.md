@@ -1,0 +1,956 @@
+# Deliver qslib 1.0 as a reusable quantum simulation library
+
+This ExecPlan is a living document governed by `PLANS.md` at the qslib project
+root. The sections `Progress`, `Surprises and discoveries`, `Decision log`, and
+`Outcomes and retrospective` must be maintained as implementation proceeds.
+
+## Purpose and user-visible outcome
+
+qslib 1.0 will provide one coherent Rust library for the reusable scientific
+parts of the existing ncli and SSE programs. A physicist will be able to define
+a lattice and pair-dependent couplings, construct a TFIM, isotropic Heisenberg,
+J1-J2, disordered exchange, or Rydberg Hamiltonian, use symmetries and conserved
+sectors, compute exact ground states and small-system dynamics, evaluate common
+observables, solve reusable TDVP numerical problems, and run supported
+finite-temperature SSE simulations. The same conventions will be available
+through Rust, a documented command line, and Python bindings suitable for ncli.
+
+A complete local demonstration will construct a four-site model with
+heterogeneous couplings, print its exact ground-state energy and observables,
+evolve a state for a short time, run a small thermal SSE job where the model is
+supported, and reproduce the same exact result through Python. The release
+candidate will build from a clean checkout and pass all Rust, Python,
+documentation, conformance, portability, and packaging gates.
+
+This plan defines completion as qslib 1.0. Quantum simulation is an open-ended
+field, so capabilities listed under non-goals are not allowed to delay 1.0.
+
+## Progress
+
+- [x] (2026-07-19 16:46Z) Defined normative scientific conventions in
+  `docs/conventions.md`, including pair-dependent weighted interactions.
+- [x] (2026-07-19 16:46Z) Added physics-first repository guidance, TDD policy,
+  architecture notes, ADR machinery, one architect agent, and three qslib
+  skills.
+- [x] (2026-07-19 16:46Z) Inventoried the existing ncli physics, exact, TDVP,
+  symmetry, observable, and test modules and the standalone Rust SSE crate.
+- [x] (2026-07-19 16:46Z) Wrote this initial self-contained qslib 1.0 ExecPlan.
+- [x] (2026-07-19 17:00Z) Added complete Apache-2.0 licensing, Cargo metadata,
+  security and contribution policies, changelog, Rust 1.85 toolchain policy,
+  and a code-of-conduct decision without exposing an inferred personal email.
+- [x] (2026-07-19 17:00Z) Drafted and architect-reviewed the seven required
+  technical ADRs plus explicit repository-ownership and registry-name ADRs.
+  Dependency-sensitive records were accepted after their exact graphs passed
+  MSRV, stable, license, source, and advisory validation.
+- [x] (2026-07-19 17:00Z) Verified through crates.io that `qslib` is occupied by
+  an unrelated active package and that the two initial alternative facade names
+  returned no search matches. Publication remains disabled.
+- [x] (2026-07-19 17:08Z) Exhausted safe offline Milestone 0 work, reverified
+  the ownership state, and paused at the explicit owner gate after three
+  consecutive goal turns without the required decisions. Resume from the
+  current gate-status list under `External authority and owner gates`.
+- [x] (2026-07-19 17:13Z) With explicit owner authorization, initialized
+  `qslib/` as a dedicated Git repository on branch `main` and copied the
+  architect agent plus all three qslib skills into the new project root. No
+  commit, remote, push, or parent-file removal was performed.
+- [x] (2026-07-19 17:15Z) Reverified the dedicated repository and paused after
+  three consecutive resumed goal turns at the reduced owner gate: remote URL,
+  registry names, dependency downloads, conduct reporting, and commits remain
+  unauthorized or undecided.
+- [x] (2026-07-19 17:16Z) Owner approved remote
+  `https://github.com/lere01/qslib.git`, `qslib-quantum` distributions, Rust
+  import `qslib`, Python import `qslib_quantum`, repository-scoped dependency
+  downloads, closed external contributions, and local commits. Configured the
+  remote without network contact; push and pull remain prohibited.
+- [x] (2026-07-19 17:34Z) Installed Rust 1.85.0 and validated the selected
+  linear-algebra, RNG, checksum, serialization, Parquet/NPY, and Python FFI
+  dependency graph on Rust 1.85 and current stable. Cargo-deny license, source,
+  and advisory checks pass with one documented unmaintained `paste 1.0.15`
+  exception for which no safe transitive upgrade exists.
+- [x] (2026-07-19 18:03Z) Began Milestone 1 with the approved nine-package
+  workspace and empty default facade feature set. Added eight independent,
+  checksummed neutral fixtures, captured the intended compile failure for the
+  missing harness API, then implemented the strict parser and made five fixture
+  tests plus three workspace-boundary tests green.
+- [x] (2026-07-19 17:43Z) Completed Milestone 0: established the dedicated
+  repository, ownership boundary, accepted architecture decisions, verified
+  the exact staged tree from an isolated reconstruction, and prepared the
+  authorized local milestone commit without contacting the remote.
+- [x] (2026-07-19 18:09Z) Completed Milestone 1: created the nine-package Rust
+  workspace, additive facade features, pinned cross-platform CI definitions,
+  strict checksummed neutral fixtures, and an independent conformance and
+  dependency-boundary harness. Rust 1.85 and stable checks, docs, feature
+  combinations, cargo-deny, and all eight harness tests pass locally.
+- [ ] Complete Milestone 2: implement scalar policy, identifiers, basis states,
+  sectors, and deterministic packing.
+- [ ] Complete Milestone 3: implement geometry, boundaries, bonds, weighted
+  interactions, and disorder realizations.
+- [ ] Complete Milestone 4: implement operators, Hamiltonians, and canonical
+  model constructors.
+- [ ] Complete Milestone 5: implement symmetry groups, actions, sectors, and
+  projection utilities.
+- [ ] Complete Milestone 6: implement exact matrices, eigensolvers, ground-state
+  search, exact thermodynamics, and exact evolution.
+- [ ] Complete Milestone 7: implement observables, online statistics,
+  autocorrelation diagnostics, and disorder aggregation.
+- [ ] Complete Milestone 8: implement variational local-energy and TDVP
+  numerical kernels from caller-supplied samples and derivatives.
+- [ ] Complete Milestone 9: implement transactional real- and imaginary-time
+  integration and checkpointable evolution state.
+- [ ] Complete Milestone 10: migrate and reconcile the supported SSE algorithms.
+- [ ] Complete Milestone 11: implement versioned configuration, artifacts, and
+  checkpoint schemas.
+- [ ] Complete Milestone 12: implement Python bindings and ncli parity adapters.
+- [ ] Complete Milestone 13: implement the physicist-first command line.
+- [ ] Complete Milestone 14: complete guides, examples, API documentation, and
+  the local documentation site.
+- [ ] Complete Milestone 15: complete performance, fuzzing, portability,
+  dependency, and API-stability hardening.
+- [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.
+
+## Surprises and discoveries
+
+- Observation: qslib began as a binary `Hello, world!` template and
+  documentation, not a library implementation.
+  Evidence: the initial audit found only `src/main.rs`; Milestone 0 has since
+  added an intentionally empty documented library target without scientific
+  behavior.
+- Observation: the modern ncli physics and dynamics paths already have a broad
+  independent test corpus that can seed neutral parity fixtures.
+  Evidence: the repository currently contains more than two hundred Python test
+  functions, including exact Hamiltonian, row-major geometry, observable, and
+  TDVP parity tests.
+- Observation: the standalone Rust SSE crate already contains validated
+  geometry, Hamiltonian terms, TFIM and Rydberg decompositions, samplers,
+  artifacts, a CLI, documentation, and parallel-chain support.
+  Evidence: `sse/src/lib.rs` exports these public surfaces and `sse/tests/cli.rs`
+  exercises the command line.
+- Observation: legacy SSE `Spin::Up` cannot be converted universally to a qslib
+  bit because TFIM and Rydberg attach different physical meanings to it.
+  Evidence: `docs/conventions.md` requires a model-aware compatibility adapter.
+- Observation: native Rust neural-network training would duplicate PyTorch GPU
+  functionality without addressing the primary computational cost.
+  Evidence: `crates/README.md` records that the dominant ncli work is dense GPU
+  matrix multiplication and requires profiling before native acceleration.
+- Observation: before repository separation, the parent ncli worktree was
+  extensively dirty and qslib resolved to the ncli root.
+  Evidence: the 2026-07-19 Milestone 0 audit showed `qslib/` and all qslib agent
+  assets as untracked parent paths alongside unrelated work. After explicit
+  owner approval, `git rev-parse --show-toplevel` from qslib resolves to the
+  dedicated qslib root and the required agent assets are self-contained there.
+- Observation: `qslib` is not an available Rust or Python distribution name.
+  Evidence: `cargo search qslib --limit 10` returned the unrelated crates.io
+  package `qslib = "0.15.2"`, and PyPI identifies the same brand as a
+  QuantStudio qPCR library. Rust source can retain library target `qslib`, but
+  public distributions and the Python import need collision-safe names.
+- Observation: the host has current stable Rust 1.96.0 but not the declared
+  Rust 1.85.0 MSRV toolchain.
+  Evidence: `rustup run 1.85.0 rustc --version` reported that toolchain 1.85.0
+  is not installed. Installing it is part of the unresolved dependency-download
+  authority gate.
+- Observation: the likely remote `https://github.com/lere01/qslib.git` is not
+  publicly accessible from the current unauthenticated environment.
+  Evidence: a read-only `git ls-remote` returned `Repository not found`; this
+  does not distinguish an absent repository from a private one and therefore
+  cannot establish remote metadata.
+- Observation: only a subset of proposed dependencies is already present in the
+  local Cargo source cache.
+  Evidence: cached `rand_chacha 0.9.0`, `serde 1.0.229`, `serde_json 1.0.150`,
+  and `serde_yaml_ng 0.10.0` declare MSRVs at or below Rust 1.85 and compatible
+  licenses. `faer`, BLAKE3, Parquet, NPY, PyO3, and NumPy are not cached, so the
+  corresponding ADRs cannot be validated offline.
+- Observation: the original Milestone 1 gate required intentionally failing
+  tests while `PLANS.md` requires every completed milestone to remain green.
+  Evidence: the architect review identified the contradiction. Milestone 1 now
+  validates neutral fixtures and harnesses while later milestones record their
+  red step immediately before implementation and close green.
+- Observation: both selected `faer 0.24.4` and Parquet `59.1.0` pull in
+  unmaintained `paste 1.0.15` through their current transitive graphs.
+  Evidence: cargo-deny reported RUSTSEC-2024-0436 and showed paths through
+  `gemm` and Parquet. The advisory describes maintenance status rather than an
+  exploitable vulnerability and states that no safe upgrade is available.
+- Observation: Milestone 1 initially could not download Serde and BLAKE3 in the
+  restricted sandbox even though the owner had authorized repository-scoped
+  dependencies.
+  Evidence: Cargo reported DNS resolution failure; the approved elevated rerun
+  downloaded the locked Rust 1.85-compatible graph and then exposed the
+  intended missing-harness compile error.
+- Observation: using the same target name `qslib` for the public library and
+  the installed CLI command produces a Cargo rustdoc output collision.
+  Evidence: workspace rustdoc warned that the library and binary both wanted
+  `target/doc/qslib/index.html`; marking the CLI binary `doc = false` preserves
+  the command name and removes the collision while keeping library docs.
+- Observation: the committed M1 tree is reproducible without relying on the
+  source worktree or untracked generated output.
+  Evidence: the staged index was reconstructed under
+  `/private/tmp/qslib-m1-candidate.gEDI5F/qslib`; Rust 1.85 and stable checks,
+  tests, rustdoc, metadata, license/source policy, links, agent metadata, and
+  text-policy checks passed. A fresh local clone at commit `9c7cda5` was clean
+  and passed both workspace test suites.
+- Observation: a tree reconstructed solely from the Git index is sufficient to
+  expose missing untracked governance or agent files before the first commit.
+  Evidence: `git checkout-index --all` produced an isolated candidate under
+  `/private/tmp`; both Rust toolchains and all integrity checks passed there.
+
+## Decision log
+
+- Decision: qslib 1.0 is a finite release contract, not every conceivable
+  quantum simulation method.
+  Rationale: a bounded definition of done is required for reliable autonomous
+  execution and semantic versioning.
+  Date/author: 2026-07-19, initial plan.
+- Decision: use a layered Cargo workspace with a small facade crate and
+  capability crates separated by dependency weight.
+  Rationale: core geometry and physics types should remain reusable without
+  pulling in eigensolvers, Python, CLI, parallel SSE, or artifact dependencies.
+  Date/author: 2026-07-19, initial plan.
+- Decision: keep neural-network architectures, autograd, and GPU training in
+  ncli for 1.0. qslib variational APIs consume caller-supplied amplitudes,
+  ratios, samples, local energies, or log derivatives.
+  Rationale: this creates reusable numerical machinery without recreating a
+  tensor framework in Rust.
+  Date/author: 2026-07-19, initial plan.
+- Decision: port SSE behavior into a qslib workspace crate and retain an
+  explicit compatibility path for the standalone `quantum-sse` crate during
+  migration.
+  Rationale: qslib must own canonical basis and interaction types while current
+  SSE users need a safe transition.
+  Date/author: 2026-07-19, initial plan.
+- Decision: external publication is not part of autonomous completion.
+  Rationale: pushing, tagging, crates.io publication, package signing, and
+  release creation require explicit owner authority. Local verified artifacts
+  are sufficient for the release-candidate gate.
+  Date/author: 2026-07-19, initial plan.
+- Decision: pin ordinary qslib development to Rust 1.85.0 and test current
+  stable separately.
+  Rationale: edition 2024 begins at Rust 1.85, and continuously exercising the
+  MSRV prevents accidental reliance on newer language or standard-library APIs.
+  Date/author: 2026-07-19, primary agent after architect review.
+- Decision: keep dependency-sensitive ADRs proposed until actual locked
+  dependencies pass license, MSRV, and platform checks.
+  Rationale: documentation research supports the selected architecture, but an
+  accepted dependency decision needs build evidence rather than an assumption.
+  Date/author: 2026-07-19, primary agent and qslib-architect.
+- Decision: accept ADR-0002 through ADR-0005 after their exact candidate graphs
+  compiled on Rust 1.85 and stable and passed license and source policy checks.
+  Linux, Windows, and wheel validation remain Milestone 1 and release gates,
+  not prerequisites for accepting these architecture choices.
+  Rationale: the locked dependency evidence resolves the architecture risk;
+  cross-platform execution validates the implementation and packaging later.
+  Date/author: 2026-07-19, primary agent after qslib-architect final review.
+- Decision: use immutable Parquet trajectory parts with an atomic manifest and
+  JSON plus named NPY checkpoint payloads.
+  Rationale: append-only parts provide transactional recovery, while NPY keeps
+  checkpoint arrays simple, typed, portable, and independently readable from
+  Python.
+  Date/author: 2026-07-19, primary agent after architect review.
+- Decision: use ChaCha20 for qslib 1.x streams with BLAKE3 domain-separated,
+  versioned seed derivation.
+  Rationale: the algorithm and exact derivation are durable metadata, and
+  logical stream identities remain independent of scheduling.
+  Date/author: 2026-07-19, primary agent after architect review.
+- Decision: do not silently claim the `qslib` Python import while an unrelated
+  active distribution owns that namespace.
+  Rationale: a distinct distribution name alone does not prevent both packages
+  from installing files into the same interpreter namespace.
+  Date/author: 2026-07-19, primary agent after registry verification.
+- Decision: qslib is a dedicated Git repository rather than an untracked ncli
+  subtree.
+  Rationale: qslib has independent versioning, CI, consumers, agent guidance,
+  and release artifacts, while the parent ncli worktree contains unrelated
+  active changes. A separate root gives every qslib operation an unambiguous
+  ownership boundary.
+  Date/author: 2026-07-19, owner approval implemented by the primary agent.
+- Decision: use `qslib-quantum` for Rust and Python distributions, `qslib` for
+  the Rust library target, and `qslib_quantum` for the Python import package.
+  Rationale: the selected distribution is collision-safe while preserving the
+  qslib brand. The Python import must also avoid the unrelated active `qslib`
+  namespace.
+  Date/author: 2026-07-19, owner approval implemented by the primary agent.
+- Decision: keep unsolicited external contributions closed and do not adopt a
+  public code of conduct at this project stage.
+  Rationale: opening contributions requires a private reporting contact
+  approved for publication and a later explicit governance decision.
+  Date/author: 2026-07-19, owner.
+- Decision: local initial and milestone commits are authorized, while push and
+  pull are prohibited.
+  Rationale: local commits provide recoverable milestone boundaries without
+  causing external state changes.
+  Date/author: 2026-07-19, owner.
+- Decision: accept a monitored cargo-deny exception for RUSTSEC-2024-0436 until
+  `faer` and Arrow/Parquet remove `paste 1.0.15`.
+  Rationale: `paste` is used as a compile-time macro, the advisory reports
+  unmaintained status rather than a vulnerability, both selected foundational
+  graphs require it, and no safe upgrade exists. The exception is explicit and
+  must be removed when upstream migrates.
+  Date/author: 2026-07-19, primary agent after architect confirmation.
+- Decision: use prefixed Cargo package identifiers with ergonomic Rust targets,
+  retain the unpublished name `qslib-test-support`, and keep the facade default
+  feature set empty.
+  Rationale: this reconciles ADR-0001's conceptual crate names with ADR-0009,
+  preserves concise imports, and makes core-only dependency cost explicit.
+  Date/author: 2026-07-19, primary agent after qslib-architect review.
+- Decision: store neutral conformance evidence in
+  `fixtures/conformance/v1/` with strict case-specific payload validation and a
+  BLAKE3 manifest.
+  Rationale: a language-neutral, checksummed oracle can be reused by Rust,
+  Python, and future backends without depending on production implementation.
+  Date/author: 2026-07-19, primary agent after qslib-architect and conformance
+  review.
+
+## Outcomes and retrospective
+
+Milestone 0 is complete. The project has a
+dedicated repository root, self-contained agent assets, complete licensing and
+baseline governance, an explicit library target, a pinned MSRV policy, and
+architect-reviewed architecture records. No scientific production behavior has
+been implemented. All owner choices are resolved, Rust 1.85 and stable checks
+pass, all nine initial ADRs are accepted, and the dependency policy is
+machine-readable. The architect's final review found no scientific or owner
+gate. The exact staged tree was reconstructed outside the working tree and
+passed the MSRV, stable, metadata, documentation-link, agent-metadata, license,
+source, and text-policy checks.
+
+Milestone 1 is now complete. A physicist-facing contributor can inspect the
+approved package map and feature costs, run the same local checks used by CI,
+and examine eight independently derived small-system evidence files before
+any model implementation exists. The harness rejects unknown schemas,
+unsupported conventions, missing provenance, malformed matrices, non-finite
+values, duplicate identities, wrong checksums, and incomplete fixture sets.
+Linux, macOS, and Windows workflow definitions are authored and action-pinned;
+their remote execution remains a later owner-authorized CI observation because
+push and pull remain prohibited. Milestone 2 starts with failing public tests
+for checked identifiers, basis states, and deterministic packing.
+
+## Context and orientation
+
+The qslib project root is its dedicated Git repository at `qslib/`. Its
+authoritative files are `AGENTS.md`, `PLANS.md`, `docs/conventions.md`,
+`docs/architecture/README.md`, and this ExecPlan. Project-scoped agent assets
+live at `.codex/agents/qslib-architect.toml` and `.agents/skills/qslib-*` inside
+that root. The surrounding ncli repository remains a behavioral reference and
+contains unrelated active work that qslib operations must not modify.
+
+The existing Python implementation is a behavioral reference, not the qslib
+architecture. Important source areas are:
+
+- `src/ncli/physics/hamiltonians/` for TFIM, Heisenberg J1-J2, Rydberg,
+  lattice-pair construction, and local-energy kernels;
+- `src/ncli/physics/observables/` for energy moments, magnetization,
+  correlations, structure factors, Fisher information, Shannon entropy, and
+  entanglement estimators;
+- `src/ncli/dynamics/exact.py` and `src/ncli/dynamics/exact_tfim.py` for exact
+  bases, sparse matrices, ground-state references, and exact time evolution;
+- `src/ncli/variational/tdvp/` for parameter layouts, QGT statistics, dense and
+  matrix-free solvers, regularization, replay, and diagnostics;
+- `src/ncli/dynamics/integrators.py`, `state.py`, and `checkpoint.py` for
+  accepted-state integration and recovery;
+- `src/ncli/models/common/symmetry/` and
+  `src/ncli/wavefunction/symmetry.py` for existing group actions and gauges;
+- `tests/` for independent behavioral anchors and regression cases.
+
+The existing Rust reference is `sse/`. Its core source lies in
+`sse/src/geometry.rs`, `lattice.rs`, `hamiltonian.rs`, and `sse/`. It currently
+supports TFIM and Rydberg SSE, parallel deterministic chains, configuration,
+artifacts, a CLI, and documentation. Its physical conventions must be converted
+explicitly rather than copied blindly.
+
+The canonical qslib site order is row-major, `site = x + Lx*y`. Packed states
+are little-endian by site. In a selected Pauli simulation basis, bit zero has
+eigenvalue plus one and bit one has eigenvalue minus one. Rydberg occupation is
+the bit value, `n = (1-Z)/2`. Couplings belong to resolved interaction terms and
+may vary by pair. These meanings are release-critical.
+
+## Scope and non-goals
+
+qslib 1.0 includes the following supported capabilities:
+
+- validated chain, rectangular, square, triangular, and custom geometries with
+  open and periodic boundaries where the geometry defines them;
+- simple and explicit periodic-image bond multiplicity;
+- dense and packed two-level basis states, fixed-Hamming-weight sectors, and
+  explicit simulation bases;
+- weighted per-site and per-pair operator terms, constants, deterministic term
+  combination, and model provenance;
+- inhomogeneous TFIM, isotropic Heisenberg exchange, homogeneous and disordered
+  J1-J2 geometry, and driven Rydberg models;
+- pair-supplied, matrix-supplied, shell-generated, and seeded disorder coupling
+  inputs, with realized values persisted;
+- lattice transformations, finite symmetry groups, spin inversion, characters,
+  orbit representatives, invariant sectors, and projection utilities;
+- full and conserved-sector exact bases, dense and sparse Hermitian matrices,
+  ground and low-lying eigensystems, exact thermal sums for small systems, and
+  real- and imaginary-time exact evolution;
+- energy, variance, Pauli and spin magnetization, raw and connected
+  correlations, structure factors, sublattice order, total spin, Fisher
+  information, Shannon entropy, and exact pure-state bipartite entropy;
+- online weighted moments, multiple-chain aggregation, autocorrelation and
+  effective-sample diagnostics, and separate disorder-ensemble aggregation;
+- local-energy evaluation from caller-provided amplitudes or ratios, QGT and
+  force statistics from caller-provided log derivatives, dense and
+  matrix-vector TDVP solves, documented regularizers, and transactional
+  integrators;
+- sign-safe SSE for the models and parameter regimes validated by the migrated
+  implementation, initially TFIM and Rydberg, with explicit rejection of
+  unsupported sign structures;
+- versioned YAML and JSON configuration, JSON summaries, a columnar trajectory
+  format, checksummed artifacts, and restartable accepted-boundary checkpoints;
+- Rust APIs, Python bindings for stable scientific kernels, a CLI, examples,
+  rustdoc, a physics-first guide, and local release artifacts.
+
+The following are post-1.0 unless an accepted ADR replaces a listed 1.0 item
+without expanding the schedule:
+
+- native Rust neural-network architectures, autograd, optimizers, or GPU
+  training;
+- a general tensor library or direct replacement for PyTorch;
+- matrix-product states, PEPS, tensor-network contraction, circuit simulation,
+  quantum hardware control, or chemistry-specific integral pipelines;
+- a general cure for the SSE sign problem or an assertion that arbitrary
+  disordered Heisenberg models are sign safe;
+- Ewald summation and arbitrary periodic simulation cells beyond the validated
+  1.0 geometry contract;
+- distributed multi-GPU TDVP or production-scale exact diagonalization;
+- every observable and model present in the literature;
+- remote publication or deployment without owner authorization.
+
+## Architecture and interfaces
+
+Convert the qslib package into a Cargo workspace while retaining the root
+package as the public `qslib` facade. Conceptual crate labels are followed by
+their Cargo package identifiers where those differ:
+
+- `qslib-core` (`qslib-quantum-core`): identifiers, scalar and error policy,
+  basis states, geometry,
+  weighted interactions, operators, canonical models, symmetry primitives, and
+  observable definitions;
+- `qslib-exact` (`qslib-quantum-exact`): basis enumeration, matrix construction,
+  Hermitian eigensolvers,
+  exact thermodynamics, and exact evolution;
+- `qslib-variational` (`qslib-quantum-variational`): local-energy aggregation,
+  QGT and force statistics,
+  TDVP linear solves, diagnostics, and integrators;
+- `qslib-sse` (`qslib-quantum-sse`): SSE decomposition, state, updates,
+  measurements, deterministic
+  parallel chains, and thermal diagnostics;
+- `qslib-io` (`qslib-quantum-io`): versioned configuration, manifests,
+  artifacts, checksums, and
+  checkpoints;
+- `qslib-python` (`qslib-quantum-python`): PyO3 and NumPy bindings for
+  intentionally stable kernels;
+- `qslib-cli` (`qslib-quantum-cli`): physicist-first commands built only on
+  public library APIs;
+- `qslib-test-support`: unpublished neutral fixtures, independent tiny-matrix
+  builders, and legacy parity loaders used only by tests.
+
+The root `qslib` facade reexports `qslib-core` and feature-gates heavier
+capabilities. Core-only use must not compile eigensolver, Rayon, Python, CLI, or
+columnar-I/O dependencies. Provide a documented `full` feature for users who
+want all Rust capabilities. Python and CLI remain separate packages rather than
+facade features.
+
+Use `f64` and `Complex64` for reference public numerics. Lower precision may be
+accepted only by APIs that record it explicitly. Keep unsafe Rust forbidden in
+core scientific crates. Any unavoidable FFI unsafe code stays inside
+`qslib-python`, is documented, and has boundary tests.
+
+The initial stable vocabulary should include checked equivalents of `SiteId`,
+`Axis`, `BasisBit`, `PackedState`, `SectorBasis`, `BoundaryCondition`,
+`Geometry`, `Bond`, `InteractionId`, `WeightedInteraction`, `OperatorChannel`,
+`HamiltonianTerm`, `Hamiltonian`, and model-specific validated builders. Exact,
+variational, and SSE crates consume these shared meanings rather than defining
+parallel spin or bond types.
+
+The implementation must settle the open convention decisions through ADRs
+before the affected production code. Required early ADRs cover workspace
+boundaries, linear algebra and sparse storage, deterministic RNG and seed
+derivation, serialization and columnar artifacts, Python FFI ownership, public
+stability and feature flags, and migration of the standalone SSE crate. Each
+ADR must record evaluated alternatives and a testable consequence.
+
+If no maintained sparse Hermitian eigensolver satisfies the accepted ADR,
+implement a qslib-owned Lanczos reference with deterministic initialization,
+full or selective reorthogonalization, residual diagnostics, degeneracy tests,
+and a dense fallback. Do not silently call a non-Hermitian solver or discard
+complex phases.
+
+## Milestones
+
+### Milestone 0: repository and architecture gate
+
+Establish qslib as a clean ownership and versioning unit before substantial
+code is written. The preferred outcome is a dedicated qslib Git repository with
+the current `.agents` skills and `.codex` agent copied into its root. If the
+owner elects to keep qslib in the ncli repository through 1.0, record that
+decision and ensure every command and commit path is scoped to `qslib/` plus the
+project agent assets.
+
+Add the Apache-2.0 license, package metadata, security policy, contribution
+guide, code-of-conduct decision, changelog, rust-toolchain policy, and initial
+ADRs named above. Choose an MSRV no lower than Rust 1.85 because edition 2024 is
+in use; raise it only when an accepted dependency decision requires that.
+Resolve whether the qslib name is available for intended publication, but do
+not publish. The gate passes when a clean checkout has one unambiguous project
+root, all guidance is discoverable, licensing is complete, ADRs are accepted,
+and no production crate decision remains implicit.
+
+Current evidence at 2026-07-19 17:34Z:
+
+- Rust 1.85 and current stable formatting, locked checks, Clippy with warnings
+  denied, all-target tests, and rustdoc with warnings denied pass for the
+  architecture scaffold. There are no scientific tests or behaviors yet.
+- Cargo metadata reports package `qslib-quantum`, library target `qslib`,
+  Apache-2.0, edition 2024, Rust 1.85, the approved remote URLs, and publication
+  disabled.
+- `LICENSE` is byte-identical to the complete Apache-2.0 text already used by
+  the standalone SSE project.
+- Architect TOML, all three qslib skill front matters, and all three skill
+  interface metadata files parse successfully.
+  An initial validation command used paths relative to the wrong directory and
+  assumed unavailable PyYAML; the corrected check used parent-root paths,
+  Python `tomllib`, and Ruby's standard YAML parser.
+- The no-en-dash and no-em-dash scan passes for qslib and its project agent
+  assets.
+- Every relative Markdown link in the qslib documentation resolves to an
+  existing local target.
+- The initial and final independent `qslib-architect` reviews are complete.
+  Their corrections are incorporated in ADRs and this plan. The final review
+  found no scientific-convention conflict or additional owner gate.
+- The dedicated repository, self-contained agent assets, remote metadata, final
+  package identifiers, closed-contribution decision, and commit authority are
+  verified.
+- A temporary dependency probe pinned every selected dependency family and
+  compiled its used surface on Rust 1.85 and stable. `cargo deny check
+  advisories licenses sources` passes with the documented RUSTSEC-2024-0436
+  maintenance exception. This evidence supports acceptance of ADR-0002 through
+  ADR-0005. Linux, Windows, and wheel execution remain later implementation and
+  release validation gates.
+- Immediately before the final gate review, `cargo search qslib-quantum`
+  returned no crates.io match and the PyPI JSON endpoint returned HTTP 404.
+  This verifies current availability but does not reserve either name.
+- The final self-containment check initially used `path` as a zsh loop variable,
+  which temporarily replaced that subprocess's command search path. The
+  corrected command used `skill_name`; all six skill files match their source,
+  parse successfully, and no repository state was affected by the failed check.
+- The exact staged candidate was reconstructed with `git checkout-index --all`
+  into `/private/tmp/qslib-m0-candidate.Nr8BU0/qslib`. Rust 1.85 and stable
+  formatting, locked check, Clippy, tests, and rustdoc passed there. Cargo-deny
+  license and source checks, Cargo metadata assertions, agent TOML/YAML parsing,
+  relative Markdown-link validation, and the en-dash/em-dash scan also passed.
+
+### Milestone 1: workspace and conformance harness
+
+Replace the binary template with the workspace and facade structure described
+above. Add CI definitions for Linux, macOS, Windows, stable Rust, and MSRV.
+Configure formatting, clippy with warnings denied, rustdoc with missing public
+documentation denied, dependency license checks, and a test-support crate.
+
+Before implementing scientific types, add neutral JSON fixtures for rectangular
+indexing, bit packing, one-bond TFIM and Heisenberg matrices, heterogeneous
+Heisenberg couplings, two-site Rydberg energies, observable normalization, and
+basis-rotation spectrum parity. Milestone 1 tests validate fixture schemas,
+independent-oracle provenance, and harness behavior while remaining green.
+Fixtures live under `fixtures/conformance/v1/`, use strict case-specific
+payload validation, record complex `f64` matrix shape and row-major layout, and
+are bound to a sorted BLAKE3 manifest. The harness checks schema versions,
+provenance, comparison policy, dimensions, finite values, Hermiticity where
+claimed, completeness, uniqueness, and checksums without calling a production
+qslib crate.
+Each later implementation milestone adds its convention tests first, records
+their intended failing run, and makes them green before that milestone closes.
+The gate passes when the workspace scaffolds cleanly, fixture and harness tests
+pass, and CI definitions run the same commands locally. No completed milestone
+retains a required failing test.
+
+### Milestone 2: basis and foundational types
+
+Implement checked identifiers, axes, basis bits, dense binary state views,
+packed states, checked word-width serialization, Hamming weight, full basis
+iteration, and fixed-weight sector enumeration. Design APIs so Rydberg
+occupation is not an alias for an ambiguous `Spin::Up` value. Add overflow,
+invalid-bit, maximum-size, ordering, round-trip, property, and compile-time API
+tests first.
+
+The gate passes when every basis conformance vector is green, full and sector
+bases enumerate in canonical order, random valid round trips pass property
+tests, invalid states return structured errors, and no model-specific meaning
+leaks into the generic bit type.
+
+### Milestone 3: geometry, interactions, and disorder
+
+Implement the canonical geometries, coordinate mappings, boundaries,
+minimum-image distances, pair shells, bonds, multiplicity, interaction
+identities, weighted channels, dense and sparse coupling inputs, deterministic
+canonicalization, and disorder realization provenance. Write tests for tiny
+periodic degeneracies, nonsquare row-major mappings, triangular coordinates,
+custom geometry, duplicate terms, shell overlap, signed and zero couplings,
+symmetric-matrix validation, and scheduling-independent generation before code.
+
+The gate passes when both modern ncli row-major fixtures and canonical SSE
+geometry cases agree after explicit conversion, while the legacy x-major path
+fails without its named adapter and succeeds with it. Persisted disorder tables
+must reproduce without access to the generating RNG.
+
+### Milestone 4: operators, Hamiltonians, and models
+
+Implement local operator channels and a deterministic Hamiltonian term list with
+constants and per-term complex or real coefficients. Implement validated
+builders for inhomogeneous TFIM, isotropic Heisenberg exchange, homogeneous and
+disordered J1-J2 geometry, and Rydberg systems with per-site drive and detuning
+and per-pair interaction.
+
+Write explicit matrices and connected-state tests before each builder. Verify
+Hermiticity, signs, double-counting policy, basis-aware action, local-energy
+ratios, homogeneous shorthand expansion, heterogeneous coefficients, and
+invalid configurations. The gate passes when matrices and local energies match
+independent Python fixtures on small systems and every model can be inspected
+as a resolved weighted-term table.
+
+### Milestone 5: symmetry and sectors
+
+Implement site permutations, composition, inverse, finite groups, translations,
+rectangle and square point groups, spin inversion, characters, orbit
+representatives, canonicalization, sublattice gauges, and group projection.
+Separate lattice symmetries from Hamiltonian symmetries by validating that a
+candidate action preserves the resolved term list.
+
+Write group-law, permutation, projector-idempotence, character, orbit,
+Hamiltonian-commutator, and legacy-adapter tests first. The gate passes when
+small exact spectra split into symmetry sectors whose combined multiplicities
+match the unrestricted spectrum and rejected actions explain which term breaks
+the symmetry.
+
+### Milestone 6: exact ground states and dynamics
+
+Implement full and fixed-sector bases, dense and CSR Hamiltonians, matrix-vector
+action, dense Hermitian diagonalization, sparse extremal eigensolving, residual
+diagnostics, degenerate-subspace comparison, exact thermal sums, matrix
+exponentiation or Krylov evolution, and normalized imaginary-time evolution.
+
+Write tests from analytic spectra and independently assembled matrices first.
+Port neutral fixtures from `tests/test_exact_ed_vmc.py`,
+`tests/test_exact_quench.py`, and `tests/test_dynamics_exact_gate.py`. Verify
+dense-sparse parity, full-sector projection parity, residuals, unitary norm,
+energy conservation, second-order or declared integrator convergence, and
+Hadamard basis parity. The user-visible gate is a Rust example and CLI-internal
+test that obtains the correct ground state for a heterogeneous four-site model.
+
+### Milestone 7: observables and statistics
+
+Implement observable definitions and exact or sample estimators for the 1.0
+scope. Implement stable weighted online moments, within-chain and between-chain
+aggregation, autocorrelation estimates, effective sample size, R-hat with a
+named algorithm, and disorder-realization aggregation.
+
+Write product-state, singlet, analytically correlated, exact-enumeration, and
+synthetic time-series tests first. Test axes and normalization explicitly. The
+gate passes when exact observables match direct matrix evaluation, online and
+batch accumulation agree, correlated-chain diagnostics detect a constructed
+failure, and disorder uncertainty remains separate from sampling uncertainty.
+
+### Milestone 8: variational and TDVP numerical core
+
+Define interfaces that accept samples, normalized or unnormalized weights,
+local energies, amplitude ratios, and caller-computed complex log derivatives.
+Implement local-energy aggregation, energy and variance, QGT and force
+statistics, dense QGT storage, matrix-vector products, conjugate gradient,
+fixed Tikhonov, GCV selection, documented spectral or SNR filtering, direction
+clipping, residual diagnostics, and deterministic parameter-layout
+fingerprints.
+
+The Rust library does not compute neural-network derivatives in 1.0. Python
+bindings adapt Torch or NumPy-produced arrays after validation. Port the
+independent formulas and parity cases from `tests/test_variational_tdvp.py` as
+neutral fixtures. The gate passes when dense, matrix-vector, and streamed
+solutions agree on manufactured positive-semidefinite problems and real- and
+imaginary-time signs match the convention document.
+
+### Milestone 9: integration and checkpointable evolution
+
+Implement a generic velocity callback, Euler for reference, Heun, adaptive
+accepted-state transactions, Euclidean and QGT metrics, deterministic stage
+seeds, rejection without state mutation, trajectory observation boundaries,
+and serializable evolution metadata. Keep model parameter storage outside the
+integrator through a checked flat-state abstraction.
+
+Write constant and linear ODE convergence tests, rejection rollback tests,
+resume equivalence tests, RNG-stream tests, and exact small-quench comparisons
+first. The gate passes when an interrupted and resumed evolution produces the
+same accepted trajectory and diagnostics as an uninterrupted run under the
+declared reproducibility policy.
+
+### Milestone 10: SSE migration
+
+Port the standalone SSE implementation into `qslib-sse` through canonical core
+types. Do not copy the ambiguous `Spin` meaning. Introduce model-aware legacy
+adapters and compare resolved decompositions, propagated operator strings,
+energy shifts, sweep statistics, thermodynamic estimates, and deterministic
+chain seeding.
+
+Preserve TFIM and Rydberg parameter restrictions unless new sign-safe
+decompositions are independently proven. Add exact thermal comparisons at tiny
+sizes, trace validation, detailed-balance or update-balance checks where
+tractable, operator-string growth tests, thread-count determinism, and
+statistical regression tests before retiring old paths. The gate passes when
+the qslib SSE examples reproduce the standalone crate's validated physics after
+explicit conversion and unsupported sign structures fail clearly.
+
+### Milestone 11: configuration, artifacts, and checkpoints
+
+Implement versioned canonical schemas for geometries, models, interactions,
+solver settings, SSE runs, exact runs, manifests, summaries, trajectory rows,
+and checkpoints. Support human-readable YAML and JSON input, JSON summaries,
+and one documented columnar trajectory format selected by ADR. Store convention
+schema, software revision, resolved coefficients, dtype, RNG algorithm, seed
+derivation, tolerances, backend, checksums, and parameter-layout fingerprints.
+
+Write unknown-field, schema-version, malformed-array, atomic-write, checksum,
+round-trip, partial-write recovery, and legacy-load tests first. The gate passes
+when a run can be reconstructed from its resolved configuration and artifacts
+without relying on a seed to recreate disorder or on native memory layout to
+interpret arrays.
+
+### Milestone 12: Python bindings and ncli adoption
+
+Expose only stable, coarse-grained scientific kernels through `qslib-python`.
+Use NumPy-compatible arrays with explicit shape, dtype, order, and ownership.
+Start with geometry, coupling resolution, Hamiltonian inspection, exact basis
+and matrix construction, exact ground states, observables, and TDVP solves.
+Avoid per-sample Python callbacks inside Rust hot loops.
+
+Write Python tests before each binding and compare against existing ncli
+behavior. Add a pure-Python fallback or preserve the existing ncli path until
+parity and packaging are proven. Migrate ncli consumers incrementally behind a
+backend protocol. The gate passes when the exact four-site demonstration and
+selected TDVP manufactured problems produce equivalent Rust and Python results,
+wheel installation works in a clean environment, and ncli can select either
+backend explicitly.
+
+### Milestone 13: command line
+
+Implement `qslib` commands for convention and environment inspection, model
+validation and resolution, exact ground-state calculation, exact evolution,
+supported SSE runs, artifact inspection, and conformance self-tests. Keep the
+CLI thin over public APIs. Error messages must name the invalid physical field
+and expected convention.
+
+Write CLI integration and snapshot-free semantic output tests first. Support a
+machine-readable JSON mode and a readable default. The gate passes when a new
+user can run the documented four-site ground-state and tiny SSE examples from
+configuration files and inspect complete provenance without writing Rust.
+
+### Milestone 14: documentation and examples
+
+Complete crate-level and public-item rustdoc, a physics-first book, model and
+algorithm guides, installation, CLI reference, Python guide, migration guides
+for ncli and standalone SSE, reproducibility guidance, limitations, and worked
+examples. Generate API documentation and the book into one local site layout
+that can later be deployed to GitHub Pages.
+
+All examples must execute in tests or CI. Check internal links, math rendering,
+missing docs, and code snippets. The gate passes when a physicist unfamiliar
+with Rust can install a local artifact, run the ground-state and SSE tutorials,
+interpret every reported quantity, and follow links to detailed APIs.
+
+### Milestone 15: hardening and stability
+
+Benchmark geometry, interaction resolution, matrix construction, matrix-vector
+action, observables, TDVP solves, and SSE sweeps. Establish recorded baselines
+without making wall-clock timing assertions in unit tests. Add property tests,
+targeted fuzzing for parsers and state conversions, Miri-compatible core tests,
+large-size overflow tests, dependency license and vulnerability review, feature
+combination checks, MSRV checks, and public API semver checks.
+
+Review every public item and feature. Remove accidental exports, unsupported
+prototypes, stale compatibility paths whose retirement criteria are satisfied,
+and undocumented panics. The gate passes when all supported feature
+combinations build, core tests pass under Miri where applicable, fuzz targets
+complete their bounded CI run, benchmarks have no unexplained major regression,
+and dependency policy is clean.
+
+### Milestone 16: qslib 1.0 release candidate
+
+Run the complete acceptance matrix from a clean checkout. Build optimized Rust
+libraries, CLI binaries for locally available targets, Python source and wheel
+artifacts, the documentation site, checksums, license bundle, changelog, and
+release notes. Install artifacts into clean temporary environments and rerun the
+user-visible demonstrations.
+
+Set the version to 1.0.0 only after API review and every required gate passes.
+Do not tag, push, publish, sign, or deploy. Present the owner with the exact
+artifact paths, checksums, test matrix, known limitations, migration status,
+and optional publication commands. The project is complete under this plan
+when nothing remains except explicitly authorized external release actions and
+post-1.0 roadmap items.
+
+## Concrete commands
+
+Run commands from the qslib project root after Milestone 1 establishes the
+workspace. Update this section if accepted ADRs change tooling.
+
+    cargo fmt --check
+    cargo clippy --workspace --all-targets --all-features -- -D warnings
+    cargo test --workspace --all-features
+    RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features
+    cargo test -p qslib-test-support --test conventions
+
+Run Python binding and ncli parity tests after Milestone 12:
+
+    maturin develop -m crates/qslib-python/Cargo.toml
+    python -m pytest python/tests
+    uv run pytest tests/test_hamiltonians.py tests/test_lattices.py \
+      tests/test_exact_ed_vmc.py tests/test_exact_quench.py \
+      tests/test_variational_tdvp.py tests/test_row_major_lattice_pairs.py
+
+Run hardening tools after their installation is recorded by Milestone 15:
+
+    cargo deny check
+    cargo audit
+    cargo semver-checks check-release
+    cargo llvm-cov --workspace --all-features --html
+
+The release-candidate demonstration must include commands equivalent to:
+
+    cargo run -p qslib-quantum-cli -- model validate examples/heisenberg_disordered_4.yaml
+    cargo run -p qslib-quantum-cli -- exact ground-state examples/heisenberg_disordered_4.yaml
+    cargo run -p qslib-quantum-cli -- exact evolve examples/tfim_4.yaml --t-max 0.1
+    cargo run -p qslib-quantum-cli -- sse run examples/tfim_thermal_4.yaml
+    python examples/python_exact_ground_state.py
+
+Record concise outputs and numerical tolerances in this plan when the examples
+are created. Never invent expected energies. Derive and commit them through the
+independent conformance fixtures.
+
+## Validation and acceptance
+
+The 1.0 acceptance matrix requires all of the following:
+
+- every mandatory vector in `docs/conventions.md` passes through the public
+  facade and the relevant backend;
+- all workspace feature combinations selected by the feature policy compile,
+  and the documented core-only build excludes heavy optional dependencies;
+- every public item is documented and all doctests pass;
+- TFIM, Heisenberg and J1-J2, disordered exchange, and Rydberg exact matrices
+  match independent tiny-system references;
+- full and sector eigensolvers report residuals within quantity-specific
+  tolerances and handle degeneracy through invariant subspaces;
+- observables state their axes and normalization and match direct evaluation;
+- dense and matrix-vector TDVP solvers agree on manufactured problems and use
+  the canonical real- and imaginary-time signs;
+- resumed accepted-boundary integration is equivalent to uninterrupted
+  integration under the declared RNG policy;
+- supported SSE models agree with exact thermal results at tiny sizes within
+  stated statistical confidence and preserve per-chain determinism across
+  thread counts;
+- schema round trips retain realized disorder, conventions, dtype, tolerances,
+  algorithm, and checksums;
+- Rust and Python exact demonstrations agree within declared tolerances;
+- CLI errors and JSON output are tested, stable, and physically interpretable;
+- CI passes on Linux, macOS, Windows, stable Rust, and MSRV;
+- dependency, vulnerability, formatting, lint, documentation, property, fuzz,
+  and semver gates pass according to Milestone 15;
+- local release artifacts install and run in clean temporary environments;
+- no ignored required test, unexplained tolerance relaxation, undocumented
+  public API, unresolved accepted ADR, or required `TODO` remains.
+
+Test coverage is evidence, not the objective. Record workspace line and branch
+coverage, require full execution of the convention vectors, and investigate
+uncovered public scientific branches. Do not add meaningless tests solely to
+reach a numeric percentage.
+
+## Idempotence and recovery
+
+Every migration remains additive until parity tests pass. Keep neutral fixtures
+independent from both legacy and new implementations. Write generated outputs
+to ignored build or temporary directories and use atomic replacement for
+durable artifacts. Never overwrite a user data directory during tests.
+
+If dependency selection fails, return to the relevant ADR and evaluate the next
+recorded alternative without changing the public scientific contract. If a
+sparse solver is unreliable, keep the dense implementation and size guard
+working while the tested qslib Lanczos fallback is developed. If Python binding
+packaging fails on one platform, keep the Rust release candidate buildable and
+record the platform-specific blocker without weakening memory-safety checks.
+
+If a migration test exposes a legacy convention conflict, preserve the legacy
+fixture, write the explicit adapter, and keep canonical qslib behavior
+unchanged. Never make qslib silently emulate legacy behavior to obtain parity.
+
+At every stopping point, update `Progress`, `Surprises and discoveries`, and the
+`Decision log`. A fresh agent must be able to resume by reading only
+`AGENTS.md`, `PLANS.md`, this plan, accepted ADRs, and the working tree.
+
+## External authority and owner gates
+
+### Current gate status, updated 2026-07-19 17:16Z
+
+Second resume record: on 2026-07-19 the owner resolved every reduced Milestone 0
+gate. Toolchain and dependency downloads plus local commits are authorized.
+Remote push, pull, publication, signing, deployment, and destructive migration
+remain prohibited.
+
+- Dedicated repository ownership is accepted and implemented. The repository
+  uses branch `main` and contains the project agent assets.
+- Remote `origin` is configured as `https://github.com/lere01/qslib.git`.
+  Network contact, push, and pull are not authorized.
+- Registry identifiers are accepted as project brand `qslib`, Rust and Python
+  distribution `qslib-quantum`, Rust library target `qslib`, and Python import
+  `qslib_quantum`. Publication remains disabled and names are not reserved.
+- Repository-scoped Rust 1.85.0, Cargo, Python, documentation, test, audit, and
+  packaging dependency downloads are authorized.
+- Unsolicited external contributions remain closed. No public code of conduct
+  or private conduct-reporting address is adopted at this stage.
+- Local initial and milestone commits are authorized. Push and pull are not.
+- External publication, push, tag, signing, deployment, and destructive
+  migration are explicitly unauthorized by the execution prompt.
+- Remote cross-platform CI execution will require later branch/push authority
+  or another owner-approved runner. Workflows can be authored and validated
+  locally before that gate.
+- Milestone 12 changes to the separate ncli ownership unit require later
+  coordinated authority now that qslib is a dedicated repository.
+
+Before the autonomous implementation goal begins, the owner should decide or
+authorize these items:
+
+1. Resolved 2026-07-19: qslib is a dedicated Git repository because it has
+   independent versioning, releases, CI, and consumers.
+2. Resolved 2026-07-19: remote is
+   `https://github.com/lere01/qslib.git`; push and pull are prohibited.
+3. Resolved 2026-07-19: repository-scoped dependency downloads are authorized.
+4. Resolved 2026-07-19: local initial and milestone commits are authorized and
+   must never include unrelated ncli changes.
+5. Resolved: external release actions remain unauthorized.
+
+The agent must stop and request direction for a normative convention change,
+license conflict, secret or signing-key requirement, destructive migration of
+user data, remote publication, or a scope choice that changes the 1.0 contract.
+It should not stop for ordinary implementation choices already bounded by this
+plan.
+
+## Recommended autonomous goal prompt
+
+After the owner gates above are resolved, start Codex from the qslib project
+root and use this prompt in Goal mode:
+
+    Execute docs/plans/qslib-v1.md under the rules in AGENTS.md and PLANS.md.
+    Use the qslib-architect agent as the primary architectural reviewer and the
+    qslib skills at every applicable milestone. Work specification-first and
+    test-first. Continue milestone by milestone without asking me for routine
+    next steps. Keep the ExecPlan current at every stopping point. One primary
+    agent owns overlapping edits; delegate only independent exploration,
+    audits, and test runs. Preserve unrelated work. Do not publish, tag, push,
+    sign, deploy, or perform destructive migration without explicit authority.
+    Stop only when every qslib 1.0 acceptance criterion passes or when an owner
+    gate in the plan genuinely requires my decision. Return with local release
+    artifacts, checksums, test evidence, documentation paths, known limitations,
+    and exact optional publication commands.
+
+If the goal pauses because of connectivity, rate limits, or a host restart,
+resume the same goal and instruct it to reread this plan and continue from the
+`Progress` section. Do not start a second writer on the same checkout.
+
+## Revision note
+
+2026-07-19: Created the initial qslib 1.0 execution plan from the current qslib
+conventions, ncli capability inventory, standalone SSE implementation, and the
+agreed specification-driven TDD policy.
