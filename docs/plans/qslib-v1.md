@@ -103,8 +103,13 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   orbit and sector projection utilities, gauges, and resolved-model symmetry
   validation. Architect closure review approved; the complete workspace
   quality suite passes.
-- [ ] In progress: Milestone 6 implements exact matrices, eigensolvers, ground-
-  state search, exact thermodynamics, and exact evolution.
+- [x] (2026-07-19) Completed Milestone 6: implemented exact full and fixed-sector
+  bases, dense and direct CSR matrices, Hermitian spectra and residuals,
+  restarted sparse ground states, stable thermal sums, projectors, and signed
+  real- and imaginary-time evolution. Architect closure review approved; the
+  complete workspace quality suite and CLI ground-state gate pass.
+- [ ] In progress: Milestone 7 implements observables, online statistics,
+  autocorrelation diagnostics, and disorder aggregation.
 - [ ] Complete Milestone 7: implement observables, online statistics,
   autocorrelation diagnostics, and disorder aggregation.
 - [ ] Complete Milestone 8: implement variational local-energy and TDVP
@@ -800,7 +805,8 @@ Lanczos with basis-vector restarts, direct CSR assembly, fixed-sector rejection,
 degenerate-projector checks, stable thermal log-sums, signed real-time
 evolution, Hadamard spectrum parity, and norm/energy invariants are covered by
 independent tests. The heterogeneous four-site Rust example is also green.
-Architect closure review is pending.
+The CLI dependency graph gate is also green, and the architect closure review
+approved M6 after all 15 exact integration tests passed.
 
 ### Milestone 7: observables and statistics
 
