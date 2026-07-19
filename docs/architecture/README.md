@@ -111,6 +111,11 @@ resolved-interaction symmetry validation. These actions remain independent of
 exact-sector storage and solver algorithms; see the [`../symmetry.md`](../symmetry.md)
 guide.
 
+Milestone 6 adds canonical full and fixed-weight exact bases, dense and CSR
+Hamiltonian matrices, residual-reporting Hermitian diagonalization, exact
+thermal sums, and spectral real- or imaginary-time evolution. See the
+[`../exact.md`](../exact.md) contract and its independent small-system tests.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:

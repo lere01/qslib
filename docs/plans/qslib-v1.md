@@ -105,8 +105,6 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   quality suite passes.
 - [ ] In progress: Milestone 6 implements exact matrices, eigensolvers, ground-
   state search, exact thermodynamics, and exact evolution.
-- [ ] Complete Milestone 6: implement exact matrices, eigensolvers, ground-state
-  search, exact thermodynamics, and exact evolution.
 - [ ] Complete Milestone 7: implement observables, online statistics,
   autocorrelation diagnostics, and disorder aggregation.
 - [ ] Complete Milestone 8: implement variational local-energy and TDVP
@@ -720,7 +718,7 @@ Independent tests cover heterogeneous pair terms, Rydberg occupation energies,
 J1/J2 exact shell counts, triangular rejection, Hermiticity, complex Pauli
 local energy, identity reduction, and basis-spectrum invariants. Focused and
 workspace Rust 1.85 tests, Clippy with warnings denied, and rustdoc with
-warnings denied are green; architect closure review is pending.
+warnings denied are green; architect closure review approved M4.
 
 The closure corrections are also implemented: local energy now preserves a
 general complex coefficient while conjugating only the Hermitian Pauli matrix
@@ -729,7 +727,7 @@ ordering; `j1j2_disordered` validates exact shell lengths and preserves signed,
 zero, and overlapping shell identities; `ResolvedModel` retains a typed
 `ModelSpecification`; and qslib-core tests compare complete model matrices and
 local-energy rows against the independent neutral fixtures in
-`fixtures/conformance/v1/`. The final architect audit is pending.
+`fixtures/conformance/v1/`. The final architect audit approved M4.
 The final qslib-architect audit approved M4 after rerunning 55 qslib-core
 integration tests, Clippy with warnings denied, and rustdoc with warnings
 denied.
@@ -783,6 +781,23 @@ dense-sparse parity, full-sector projection parity, residuals, unitary norm,
 energy conservation, second-order or declared integrator convergence, and
 Hadamard basis parity. The user-visible gate is a Rust example and CLI-internal
 test that obtains the correct ground state for a heterogeneous four-site model.
+
+Execution record (2026-07-19): the M6 acceptance tests were added before
+production implementation. The focused Rust 1.85 run failed at compilation
+with unresolved exact-basis, matrix, eigensolver, thermal, and evolution APIs,
+which is the intended red state.
+
+Implementation record (2026-07-19): `qslib-quantum-exact` now provides ordered
+full and fixed-weight bases, dense and CSR matrix construction from the core
+Hamiltonian action, matrix-vector products, Hermitian validation, a
+deterministic complex-Hermitian reference eigensolver, residual-reporting
+ground states, exact thermal summaries, and spectral real- and imaginary-time
+evolution. Independent tests cover canonical ordering, dense-CSR parity,
+analytic one-site spectra, complex Pauli-Y Hermiticity, non-Hermitian rejection,
+thermal sums, normalized evolution, and a heterogeneous four-site ground
+state. The sparse extremal path uses deterministic fully reorthogonalized
+Lanczos and is checked against dense ground-state energy and residuals.
+Architect closure review is pending.
 
 ### Milestone 7: observables and statistics
 
