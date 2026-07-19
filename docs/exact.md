@@ -12,7 +12,9 @@ the requested Hamming weight. `DenseMatrix::from_hamiltonian` stores rows and
 columns in that basis order and uses the conventional action
 `y[row] = sum_column H[row,column] x[column]`. `CsrMatrix` is a deterministic
 compressed representation of the same matrix and is checked against dense
-matrix-vector action in the test suite.
+matrix-vector action in the test suite. CSR assembly resolves Hamiltonian
+actions directly into row storage and rejects a non-conserving Hamiltonian when
+the supplied basis is a fixed sector.
 
 The builder preserves physical constants and all pair-dependent coefficients.
 It reports missing connected states, dimension mismatches, non-Hermitian input,
@@ -25,13 +27,19 @@ returns ascending eigenvalues, normalized complex eigenvectors, and the norm of
 `H|v>-lambda|v>` for every pair. `GroundState` selects the lowest eigenvalue;
 degenerate vectors must be compared through their invariant subspace rather
 than by vector identity. `ground_state_sparse` uses deterministic full
-reorthogonalization and the same residual contract for CSR matrices.
+reorthogonalization with basis-vector restarts and the same residual contract
+for CSR matrices. `Eigensystem::projector` compares degenerate invariant
+subspaces without comparing arbitrary eigenvector representatives.
 
-`ThermalSummary` evaluates `Z`, the canonical mean energy, and
-`beta^2 Var(H)` from the exact spectrum. `evolve` uses the same spectral data
+`ThermalSummary` evaluates `Z`, stable `log Z`, the canonical mean energy, and
+`beta^2 Var(H)` from the exact spectrum using an energy-shifted log-sum-exp
+calculation. `evolve` uses the same spectral data
 for unitary `exp(-i H t)` evolution and normalized imaginary-time
-`exp(-H tau)` evolution. Time and inverse temperature are non-negative and
-finite, in the natural units defined by the project conventions.
+`exp(-H tau)` evolution. Imaginary time and inverse temperature are
+non-negative; real time may be signed. All parameters are finite and use the
+natural units defined by the project conventions.
+If `Z` exceeds the finite `f64` range, `partition_function_overflowed` is true
+and `log_partition_function` remains the authoritative finite-scale result.
 
 The backend is intended for validation and small systems. It is not a claim of
 production-scale exact diagonalization; later milestones may add a maintained

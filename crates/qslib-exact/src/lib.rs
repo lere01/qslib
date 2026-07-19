@@ -39,6 +39,20 @@ pub enum ExactError {
         /// Difference from the conjugate-transposed value.
         value: Complex64,
     },
+    /// A Hamiltonian action leaves a requested exact sector.
+    StateOutsideBasis {
+        /// Connected state that is absent from the supplied basis.
+        state: BasisState,
+    },
+    /// A matrix or vector contains a non-finite scalar.
+    NonFiniteValue {
+        /// Stable context for the invalid value.
+        context: &'static str,
+        /// Flat element index.
+        index: usize,
+        /// Invalid scalar.
+        value: Complex64,
+    },
     /// A numerical iteration did not converge.
     NonConvergent {
         /// Number of iterations attempted.
@@ -61,6 +75,16 @@ impl Display for ExactError {
                 f,
                 "matrix entry ({row},{column})={value:?} violates Hermiticity"
             ),
+            Self::StateOutsideBasis { state } => write!(
+                f,
+                "Hamiltonian action leaves supplied exact basis ({} sites)",
+                state.len()
+            ),
+            Self::NonFiniteValue {
+                context,
+                index,
+                value,
+            } => write!(f, "non-finite {context} scalar at index {index}: {value:?}"),
             Self::NonConvergent { iterations } => write!(
                 f,
                 "Hermitian eigensolver did not converge in {iterations} iterations"
@@ -169,10 +193,9 @@ impl DenseMatrix {
         let mut data = vec![Complex64::new(0.0, 0.0); length];
         for (column, state) in basis.states.iter().enumerate() {
             for (connected, coefficient) in h.apply(state)? {
-                let row = basis.index_of(&connected).ok_or(ExactError::Shape {
-                    expected: dimension,
-                    actual: 0,
-                })?;
+                let row = basis
+                    .index_of(&connected)
+                    .ok_or(ExactError::StateOutsideBasis { state: connected })?;
                 data[row * dimension + column] += coefficient;
             }
         }
@@ -188,6 +211,15 @@ impl DenseMatrix {
                 expected,
                 actual: data.len(),
             });
+        }
+        for (index, value) in data.iter().copied().enumerate() {
+            if !value.re.is_finite() || !value.im.is_finite() {
+                return Err(ExactError::NonFiniteValue {
+                    context: "matrix",
+                    index,
+                    value,
+                });
+            }
         }
         Ok(Self { dimension, data })
     }
@@ -212,6 +244,15 @@ impl DenseMatrix {
                 actual: vector.len(),
             });
         }
+        for (index, value) in vector.iter().copied().enumerate() {
+            if !value.re.is_finite() || !value.im.is_finite() {
+                return Err(ExactError::NonFiniteValue {
+                    context: "vector",
+                    index,
+                    value,
+                });
+            }
+        }
         Ok((0..self.dimension)
             .map(|row| {
                 (0..self.dimension)
@@ -229,7 +270,10 @@ impl DenseMatrix {
             for column in 0..self.dimension {
                 let difference = self.data[row * self.dimension + column]
                     - self.data[column * self.dimension + row].conj();
-                if difference.norm() > tolerance {
+                if !difference.re.is_finite()
+                    || !difference.im.is_finite()
+                    || difference.norm() > tolerance
+                {
                     return Err(ExactError::NonHermitian {
                         row,
                         column,
@@ -254,13 +298,26 @@ pub struct CsrMatrix {
 impl CsrMatrix {
     /// Build CSR storage from a Hamiltonian and exact basis.
     pub fn from_hamiltonian(h: &Hamiltonian, basis: &ExactBasis) -> Result<Self, ExactError> {
-        let dense = DenseMatrix::from_hamiltonian(h, basis)?;
+        if h.site_count().get() != basis.states[0].len() {
+            return Err(ExactError::Shape {
+                expected: h.site_count().get(),
+                actual: basis.states[0].len(),
+            });
+        }
+        let mut rows = vec![Vec::<(usize, Complex64)>::new(); basis.dimension()];
+        for (column, state) in basis.states.iter().enumerate() {
+            for (connected, coefficient) in h.apply(state)? {
+                let row = basis
+                    .index_of(&connected)
+                    .ok_or(ExactError::StateOutsideBasis { state: connected })?;
+                rows[row].push((column, coefficient));
+            }
+        }
         let mut row_offsets = vec![0];
         let mut column_indices = Vec::new();
         let mut values = Vec::new();
-        for row in 0..dense.dimension {
-            for column in 0..dense.dimension {
-                let value = dense.data[row * dense.dimension + column];
+        for row in rows {
+            for (column, value) in row {
                 if value != Complex64::new(0.0, 0.0) {
                     column_indices.push(column);
                     values.push(value);
@@ -269,7 +326,7 @@ impl CsrMatrix {
             row_offsets.push(values.len());
         }
         Ok(Self {
-            dimension: dense.dimension,
+            dimension: basis.dimension(),
             row_offsets,
             column_indices,
             values,
@@ -283,6 +340,15 @@ impl CsrMatrix {
                 actual: vector.len(),
             });
         }
+        for (index, value) in vector.iter().copied().enumerate() {
+            if !value.re.is_finite() || !value.im.is_finite() {
+                return Err(ExactError::NonFiniteValue {
+                    context: "vector",
+                    index,
+                    value,
+                });
+            }
+        }
         Ok((0..self.dimension)
             .map(|row| {
                 (self.row_offsets[row]..self.row_offsets[row + 1])
@@ -290,6 +356,45 @@ impl CsrMatrix {
                     .sum()
             })
             .collect())
+    }
+    /// Validate CSR Hermiticity without materializing a dense matrix.
+    pub fn validate_hermitian(&self, tolerance: f64) -> Result<(), ExactError> {
+        if !tolerance.is_finite() || tolerance < 0.0 {
+            return Err(ExactError::InvalidParameter("tolerance"));
+        }
+        let mut entries = HashMap::new();
+        for row in 0..self.dimension {
+            for index in self.row_offsets[row]..self.row_offsets[row + 1] {
+                let value = self.values[index];
+                if !value.re.is_finite() || !value.im.is_finite() {
+                    return Err(ExactError::NonFiniteValue {
+                        context: "CSR matrix",
+                        index,
+                        value,
+                    });
+                }
+                entries.insert((row, self.column_indices[index]), value);
+            }
+        }
+        for (&(row, column), &value) in &entries {
+            let conjugate = entries
+                .get(&(column, row))
+                .copied()
+                .unwrap_or(Complex64::new(0.0, 0.0))
+                .conj();
+            let difference = value - conjugate;
+            if !difference.re.is_finite()
+                || !difference.im.is_finite()
+                || difference.norm() > tolerance
+            {
+                return Err(ExactError::NonHermitian {
+                    row,
+                    column,
+                    value: difference,
+                });
+            }
+        }
+        Ok(())
     }
     /// Return the matrix dimension.
     pub fn dimension(&self) -> usize {
@@ -329,6 +434,27 @@ impl Eigensystem {
     pub fn residuals(&self) -> &[f64] {
         &self.residuals
     }
+    /// Construct the orthogonal projector onto selected eigenvectors.
+    pub fn projector(&self, indices: &[usize]) -> Result<DenseMatrix, ExactError> {
+        let dimension = self
+            .vectors
+            .first()
+            .map(Vec::len)
+            .ok_or(ExactError::DimensionOverflow)?;
+        let mut data = vec![Complex64::new(0.0, 0.0); dimension * dimension];
+        for &index in indices {
+            let vector = self.vector(index).ok_or(ExactError::Shape {
+                expected: self.vectors.len(),
+                actual: index,
+            })?;
+            for row in 0..dimension {
+                for column in 0..dimension {
+                    data[row * dimension + column] += vector[row] * vector[column].conj();
+                }
+            }
+        }
+        DenseMatrix::new(dimension, data)
+    }
 }
 
 /// Diagonalize a finite Hermitian matrix with a deterministic real-Jacobi reference solver.
@@ -339,7 +465,10 @@ pub fn diagonalize_hermitian(matrix: &DenseMatrix) -> Result<Eigensystem, ExactE
         return Err(ExactError::DimensionOverflow);
     }
     let real_n = n.checked_mul(2).ok_or(ExactError::DimensionOverflow)?;
-    let mut a = vec![0.0; real_n * real_n];
+    let real_dimension = real_n
+        .checked_mul(real_n)
+        .ok_or(ExactError::DimensionOverflow)?;
+    let mut a = vec![0.0; real_dimension];
     for row in 0..n {
         for column in 0..n {
             let value = matrix.data[row * n + column];
@@ -356,7 +485,9 @@ pub fn diagonalize_hermitian(matrix: &DenseMatrix) -> Result<Eigensystem, ExactE
             v
         })
         .collect::<Vec<_>>();
-    let max_iterations = real_n * real_n * 100;
+    let max_iterations = real_dimension
+        .checked_mul(100)
+        .ok_or(ExactError::DimensionOverflow)?;
     for iteration in 0..max_iterations {
         let (p, q, magnitude) = max_off_diagonal(&a, real_n);
         if magnitude < 1.0e-13 {
@@ -366,19 +497,45 @@ pub fn diagonalize_hermitian(matrix: &DenseMatrix) -> Result<Eigensystem, ExactE
             pairs.sort_by(|left, right| left.0.total_cmp(&right.0));
             let mut values = Vec::with_capacity(n);
             let mut complex_vectors = Vec::with_capacity(n);
-            for (_, index) in pairs.into_iter().step_by(2).take(n) {
-                values.push(a[index * real_n + index]);
-                complex_vectors.push(
-                    (0..n)
-                        .map(|site| Complex64::new(vectors[index][site], vectors[index][site + n]))
-                        .collect::<Vec<_>>(),
-                );
+            let mut cursor = 0;
+            while cursor < pairs.len() {
+                let group_value = pairs[cursor].0;
+                let mut end = cursor + 1;
+                while end < pairs.len()
+                    && (pairs[end].0 - group_value).abs()
+                        <= 1.0e-13 * group_value.abs().max(pairs[end].0.abs()).max(1.0)
+                {
+                    end += 1;
+                }
+                let target = (end - cursor) / 2;
+                let mut group_vectors = Vec::new();
+                for (_, index) in &pairs[cursor..end] {
+                    let candidate = (0..n)
+                        .map(|site| {
+                            Complex64::new(vectors[*index][site], vectors[*index][site + n])
+                        })
+                        .collect::<Vec<_>>();
+                    if let Some(vector) = orthonormalize(candidate, &group_vectors) {
+                        group_vectors.push(vector);
+                    }
+                    if group_vectors.len() == target {
+                        break;
+                    }
+                }
+                if group_vectors.len() != target {
+                    return Err(ExactError::InvalidParameter("degenerate eigenbasis"));
+                }
+                for vector in group_vectors {
+                    values.push(group_value);
+                    complex_vectors.push(vector);
+                }
+                cursor = end;
             }
             let residuals = complex_vectors
                 .iter()
                 .zip(values.iter())
                 .map(|(vector, value)| residual_norm(matrix, vector, *value))
-                .collect();
+                .collect::<Result<Vec<_>, _>>()?;
             return Ok(Eigensystem {
                 values,
                 vectors: complex_vectors,
@@ -395,6 +552,27 @@ pub fn diagonalize_hermitian(matrix: &DenseMatrix) -> Result<Eigensystem, ExactE
     Err(ExactError::NonConvergent {
         iterations: max_iterations,
     })
+}
+
+fn orthonormalize(
+    mut candidate: Vec<Complex64>,
+    prior: &[Vec<Complex64>],
+) -> Option<Vec<Complex64>> {
+    for vector in prior {
+        let projection = dot(vector, &candidate);
+        for (value, prior_value) in candidate.iter_mut().zip(vector) {
+            *value -= *prior_value * projection;
+        }
+    }
+    let length = norm(&candidate);
+    if length <= 1.0e-12 {
+        None
+    } else {
+        for value in &mut candidate {
+            *value /= length;
+        }
+        Some(candidate)
+    }
 }
 
 fn max_off_diagonal(a: &[f64], n: usize) -> (usize, usize, f64) {
@@ -435,14 +613,18 @@ fn jacobi_rotate(a: &mut [f64], vectors: &mut [Vec<f64>], n: usize, p: usize, q:
         vectors[q][component] = s * vkp + c * vkq;
     }
 }
-fn residual_norm(matrix: &DenseMatrix, vector: &[Complex64], value: f64) -> f64 {
-    let applied = matrix.apply(vector).unwrap_or_default();
-    applied
+fn residual_norm(
+    matrix: &DenseMatrix,
+    vector: &[Complex64],
+    value: f64,
+) -> Result<f64, ExactError> {
+    let applied = matrix.apply(vector)?;
+    Ok(applied
         .iter()
         .zip(vector)
         .map(|(left, right)| (*left - *right * value).norm_sqr())
         .sum::<f64>()
-        .sqrt()
+        .sqrt())
 }
 
 /// The lowest-energy eigenpair and its residual diagnostic.
@@ -488,6 +670,38 @@ pub fn ground_state_sparse(
     tolerance: f64,
     max_iterations: usize,
 ) -> Result<GroundState, ExactError> {
+    matrix.validate_hermitian(1.0e-10)?;
+    let mut best: Option<GroundState> = None;
+    let mut last_error = None;
+    for start_index in 0..matrix.dimension {
+        let mut start = vec![Complex64::new(0.0, 0.0); matrix.dimension];
+        start[start_index] = Complex64::new(1.0, 0.0);
+        match lanczos_from_start(matrix, tolerance, max_iterations, start) {
+            Ok(candidate) => {
+                if best
+                    .as_ref()
+                    .is_none_or(|current| candidate.energy < current.energy)
+                {
+                    best = Some(candidate);
+                }
+            }
+            Err(error) => last_error = Some(error),
+        }
+    }
+    if let Some(error) = last_error {
+        return Err(error);
+    }
+    best.ok_or(ExactError::NonConvergent {
+        iterations: max_iterations,
+    })
+}
+
+fn lanczos_from_start(
+    matrix: &CsrMatrix,
+    tolerance: f64,
+    max_iterations: usize,
+    start: Vec<Complex64>,
+) -> Result<GroundState, ExactError> {
     if !tolerance.is_finite() || tolerance <= 0.0 {
         return Err(ExactError::InvalidParameter("tolerance"));
     }
@@ -495,7 +709,14 @@ pub fn ground_state_sparse(
         return Err(ExactError::InvalidParameter("max_iterations"));
     }
     let n = matrix.dimension;
-    let mut current = vec![Complex64::new(1.0 / (n as f64).sqrt(), 0.0); n];
+    let start_norm = norm(&start);
+    if start_norm == 0.0 {
+        return Err(ExactError::InvalidParameter("start vector"));
+    }
+    let mut current = start
+        .into_iter()
+        .map(|value| value / start_norm)
+        .collect::<Vec<_>>();
     let mut previous = vec![Complex64::new(0.0, 0.0); n];
     let mut basis = Vec::new();
     let mut alphas = Vec::new();
@@ -545,7 +766,7 @@ pub fn ground_state_sparse(
                     *value += *component * *coefficient;
                 }
             }
-            let residual = residual_norm_csr(matrix, &vector, tri_ground.energy());
+            let residual = residual_norm_csr(matrix, &vector, tri_ground.energy())?;
             if residual <= tolerance {
                 return Ok(GroundState {
                     energy: tri_ground.energy(),
@@ -570,21 +791,26 @@ fn norm(vector: &[Complex64]) -> f64 {
     dot(vector, vector).re.sqrt()
 }
 
-fn residual_norm_csr(matrix: &CsrMatrix, vector: &[Complex64], value: f64) -> f64 {
-    matrix
-        .apply(vector)
-        .unwrap_or_default()
+fn residual_norm_csr(
+    matrix: &CsrMatrix,
+    vector: &[Complex64],
+    value: f64,
+) -> Result<f64, ExactError> {
+    Ok(matrix
+        .apply(vector)?
         .iter()
         .zip(vector)
         .map(|(left, right)| (*left - *right * value).norm_sqr())
         .sum::<f64>()
-        .sqrt()
+        .sqrt())
 }
 
 /// Exact canonical thermal sums evaluated from an eigensystem.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ThermalSummary {
     partition_function: f64,
+    log_partition_function: f64,
+    partition_function_overflowed: bool,
     energy: f64,
     heat_capacity: f64,
 }
@@ -594,36 +820,60 @@ impl ThermalSummary {
         if !beta.is_finite() || beta < 0.0 {
             return Err(ExactError::InvalidParameter("beta"));
         }
+        if spectrum.values.is_empty() {
+            return Err(ExactError::InvalidParameter("partition function"));
+        }
+        let minimum = spectrum
+            .values
+            .iter()
+            .copied()
+            .fold(f64::INFINITY, f64::min);
         let weights = spectrum
             .values
             .iter()
-            .map(|value| (-beta * value).exp())
+            .map(|value| (-beta * (value - minimum)).exp())
             .collect::<Vec<_>>();
-        let z: f64 = weights.iter().sum();
-        if !z.is_finite() || z == 0.0 {
+        let shifted_z: f64 = weights.iter().sum();
+        if !shifted_z.is_finite() || shifted_z == 0.0 {
             return Err(ExactError::InvalidParameter("partition function"));
         }
-        let energy = weights
+        let log_partition_function = -beta * minimum + shifted_z.ln();
+        let z = log_partition_function.exp();
+        let mean_delta = weights
             .iter()
             .zip(&spectrum.values)
-            .map(|(weight, value)| weight * value)
+            .map(|(weight, value)| weight * (value - minimum))
             .sum::<f64>()
-            / z;
-        let second = weights
+            / shifted_z;
+        let variance = weights
             .iter()
             .zip(&spectrum.values)
-            .map(|(weight, value)| weight * value * value)
+            .map(|(weight, value)| {
+                let delta = value - minimum - mean_delta;
+                weight * delta * delta
+            })
             .sum::<f64>()
-            / z;
+            / shifted_z;
+        let energy = minimum + mean_delta;
         Ok(Self {
             partition_function: z,
+            log_partition_function,
+            partition_function_overflowed: !z.is_finite(),
             energy,
-            heat_capacity: beta * beta * (second - energy * energy),
+            heat_capacity: beta * beta * variance,
         })
     }
     /// Return `Z(beta)`.
     pub fn partition_function(&self) -> f64 {
         self.partition_function
+    }
+    /// Return the numerically stable natural logarithm of `Z(beta)`.
+    pub fn log_partition_function(&self) -> f64 {
+        self.log_partition_function
+    }
+    /// Return whether `Z` exceeded the finite `f64` range; use `log_partition_function` then.
+    pub fn partition_function_overflowed(&self) -> bool {
+        self.partition_function_overflowed
     }
     /// Return the canonical mean energy.
     pub fn energy(&self) -> f64 {
@@ -642,8 +892,17 @@ pub fn evolve(
     time: f64,
     imaginary: bool,
 ) -> Result<Vec<Complex64>, ExactError> {
-    if !time.is_finite() || time < 0.0 {
+    if !time.is_finite() || (imaginary && time < 0.0) {
         return Err(ExactError::InvalidParameter("time"));
+    }
+    for (index, value) in initial.iter().copied().enumerate() {
+        if !value.re.is_finite() || !value.im.is_finite() {
+            return Err(ExactError::NonFiniteValue {
+                context: "initial vector",
+                index,
+                value,
+            });
+        }
     }
     let spectrum = diagonalize_hermitian(matrix)?;
     if initial.len() != matrix.dimension {
@@ -653,6 +912,11 @@ pub fn evolve(
         });
     }
     let mut result = vec![Complex64::new(0.0, 0.0); matrix.dimension];
+    let energy_shift = spectrum
+        .values
+        .iter()
+        .copied()
+        .fold(f64::INFINITY, f64::min);
     for (index, vector) in spectrum.vectors.iter().enumerate() {
         let overlap: Complex64 = vector
             .iter()
@@ -660,7 +924,7 @@ pub fn evolve(
             .map(|(basis, value)| basis.conj() * *value)
             .sum();
         let factor = if imaginary {
-            (-spectrum.values[index] * time).exp().into()
+            Complex64::new((-(spectrum.values[index] - energy_shift) * time).exp(), 0.0)
         } else {
             Complex64::from_polar(1.0, -spectrum.values[index] * time)
         };

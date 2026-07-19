@@ -796,7 +796,10 @@ evolution. Independent tests cover canonical ordering, dense-CSR parity,
 analytic one-site spectra, complex Pauli-Y Hermiticity, non-Hermitian rejection,
 thermal sums, normalized evolution, and a heterogeneous four-site ground
 state. The sparse extremal path uses deterministic fully reorthogonalized
-Lanczos and is checked against dense ground-state energy and residuals.
+Lanczos with basis-vector restarts, direct CSR assembly, fixed-sector rejection,
+degenerate-projector checks, stable thermal log-sums, signed real-time
+evolution, Hadamard spectrum parity, and norm/energy invariants are covered by
+independent tests. The heterogeneous four-site Rust example is also green.
 Architect closure review is pending.
 
 ### Milestone 7: observables and statistics
