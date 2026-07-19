@@ -1,10 +1,142 @@
+use qslib_io::{
+    AcceptedStateMetadata, Checkpoint, CheckpointArray, ConventionMetadata, EvolutionControls,
+    EvolutionErrorMetric, EvolutionMethod, ModelMetadata, RngStateMetadata, ScientificConfig,
+    SolverMetadata, read_checkpoint_bundle, write_checkpoint_bundle,
+};
 use qslib_variational::{
     DenseQgt, ErrorMetric, EvolutionConfig, EvolutionDriver, EvolutionError, EvolutionMetadata,
     FlatState, IntegrationMethod, Velocity,
 };
+use std::fs;
 
 fn state(values: &[f64]) -> FlatState {
     FlatState::new("layout-test", values.to_vec()).unwrap()
+}
+
+#[test]
+fn io_checkpoint_restores_evolution_driver_without_seed_regeneration() {
+    let controls = EvolutionControls {
+        method: qslib_io::EvolutionMethod::Euler,
+        error_metric: qslib_io::EvolutionErrorMetric::Euclidean,
+        adaptive: false,
+        step_tolerance: 1.0e-6,
+        dt_min: 1.0e-8,
+        dt_max: 1.0,
+        safety_factor: 0.9,
+        seed: 17,
+        seed_algorithm_version: 1,
+    };
+    let accepted =
+        AcceptedStateMetadata::new(0.2, 0.1, 2, 0, "layout-test", vec![1], controls.clone())
+            .unwrap();
+    let payload = accepted.to_bytes().unwrap();
+    let rng = RngStateMetadata::new([4; 32], 3);
+    let rng_payload = rng.to_bytes().unwrap();
+    let config = ScientificConfig::new(
+        "evolution-restore",
+        ConventionMetadata::new("qslib-conventions-v1", "row_major", "little_endian", "z"),
+        ModelMetadata::new("empty", 1, Vec::new(), "z"),
+        SolverMetadata::new(
+            "fixture",
+            "f64",
+            "chacha20",
+            "qslib-seed-v1",
+            [3; 32],
+            vec![("tolerance".into(), 1.0e-12)],
+        ),
+    );
+    let (array, _) = CheckpointArray::from_values("parameters", vec![1], &[1.2]).unwrap();
+    let checkpoint = Checkpoint::new(
+        "evolution-restore",
+        2,
+        "layout-test",
+        qslib_io::checksum(&rng_payload),
+        &payload,
+    )
+    .bind_config(&config)
+    .unwrap()
+    .with_state_metadata(accepted, rng)
+    .unwrap()
+    .with_arrays(vec![array.clone()])
+    .unwrap();
+    let root = std::env::temp_dir().join(format!("qslib-evolution-restore-{}", std::process::id()));
+    write_checkpoint_bundle(
+        &root,
+        &checkpoint,
+        &payload,
+        &rng_payload,
+        &[(&array, &[1.2])],
+    )
+    .unwrap();
+    let bundle = read_checkpoint_bundle(&root).unwrap();
+    let accepted = AcceptedStateMetadata::from_bytes(&bundle.payload).unwrap();
+    assert_eq!(bundle.checkpoint.accepted_step, accepted.accepted_steps);
+    assert_eq!(bundle.checkpoint.rng_state.unwrap().word_position(), 48);
+
+    let method = match accepted.evolution.method {
+        EvolutionMethod::Euler => IntegrationMethod::Euler,
+        EvolutionMethod::Heun => IntegrationMethod::Heun,
+    };
+    let metric = match accepted.evolution.error_metric {
+        EvolutionErrorMetric::Euclidean => ErrorMetric::Euclidean,
+        EvolutionErrorMetric::Qgt => ErrorMetric::Qgt,
+    };
+    let metadata = EvolutionMetadata::from_parts(
+        accepted.physical_time,
+        accepted.next_step,
+        accepted.accepted_steps,
+        accepted.rejected_steps,
+        accepted.evolution.seed,
+        accepted.parameter_layout_fingerprint.clone(),
+        method,
+        metric,
+        accepted.evolution.adaptive,
+        accepted.evolution.step_tolerance,
+        accepted.evolution.dt_min,
+        accepted.evolution.dt_max,
+        accepted.evolution.safety_factor,
+        accepted.evolution.seed_algorithm_version,
+    );
+    let evolution_config = EvolutionConfig {
+        method,
+        error_metric: metric,
+        adaptive: accepted.evolution.adaptive,
+        dt: accepted.next_step,
+        step_tolerance: accepted.evolution.step_tolerance,
+        dt_min: accepted.evolution.dt_min,
+        dt_max: accepted.evolution.dt_max,
+        safety_factor: accepted.evolution.safety_factor,
+        seed: accepted.evolution.seed,
+    };
+    let mut restored =
+        EvolutionDriver::from_parts(state(&[1.2]), metadata, evolution_config).unwrap();
+    let mut uninterrupted = EvolutionDriver::new(
+        state(&[1.0]),
+        EvolutionConfig {
+            method: IntegrationMethod::Euler,
+            dt: 0.1,
+            seed: 17,
+            ..EvolutionConfig::default()
+        },
+    )
+    .unwrap();
+    uninterrupted
+        .run(3, |_| {}, |_, _, _| Ok(Velocity::new(vec![1.0])))
+        .unwrap();
+    restored
+        .advance(|_, _, _| Ok(Velocity::new(vec![1.0])))
+        .unwrap();
+    assert!(
+        (restored.state().flat_state().values()[0]
+            - uninterrupted.state().flat_state().values()[0])
+            .abs()
+            < 1.0e-15
+    );
+    assert!(
+        (restored.state().metadata().time() - uninterrupted.state().metadata().time()).abs()
+            < 1.0e-15
+    );
+    let _ = fs::remove_dir_all(root);
 }
 
 #[test]

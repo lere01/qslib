@@ -131,6 +131,22 @@ impl ResolvedModel {
         &self.interactions
     }
 
+    /// Return a copy of this model with the supplied real physical constant.
+    ///
+    /// Model constructors use a zero constant because their named parameters
+    /// describe non-identity terms. Durable configuration adapters can apply
+    /// an explicitly serialized constant through this method without
+    /// rebuilding or reinterpreting the operator terms.
+    pub fn with_physical_constant(mut self, constant: Real) -> Result<Self, ModelError> {
+        finite_parameter("physical constant", constant)?;
+        self.hamiltonian = Hamiltonian::new_hermitian(
+            self.hamiltonian.site_count(),
+            Complex64::new(constant, 0.0),
+            self.hamiltonian.terms().to_vec(),
+        )?;
+        Ok(self)
+    }
+
     /// Return the original typed physical specification.
     pub const fn specification(&self) -> &ModelSpecification {
         &self.specification

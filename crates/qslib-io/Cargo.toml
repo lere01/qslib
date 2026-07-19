@@ -14,3 +14,10 @@ name = "qslib_io"
 
 [dependencies]
 qslib-core = { package = "qslib-quantum-core", version = "0.1.0", path = "../qslib-core" }
+blake3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml_ng.workspace = true
+parquet.workspace = true
+arrow-array.workspace = true
+arrow-schema.workspace = true

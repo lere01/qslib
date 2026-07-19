@@ -57,6 +57,13 @@ jobs:
         run: cargo +stable install cargo-deny --version 0.20.2 --locked
       - name: Check dependency policy
         run: cargo +stable deny check advisories licenses sources
+      - name: Install independent artifact readers
+        run: python3 -m pip install --disable-pip-version-check pyarrow blake3
+      - name: Verify generated IO artifacts through Python
+        run: |
+          fixture="${{ runner.temp }}/qslib-io-fixture"
+          cargo +stable run --locked -p qslib-quantum-io --example io_artifacts -- "$fixture"
+          python3 tools/verify_io_artifacts.py --checkpoint "$fixture/checkpoint" --dataset "$fixture/dataset"
 
   features:
     name: Facade feature boundaries

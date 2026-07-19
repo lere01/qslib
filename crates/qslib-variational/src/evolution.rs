@@ -263,6 +263,45 @@ pub struct EvolutionMetadata {
     seed_algorithm_version: u32,
 }
 impl EvolutionMetadata {
+    /// Reconstruct accepted-boundary metadata from a durable checkpoint.
+    ///
+    /// `EvolutionDriver::from_parts` performs the complete configuration and
+    /// numerical validity check after this value is assembled.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_parts(
+        time: f64,
+        proposed_dt: f64,
+        accepted_steps: u64,
+        rejected_steps: u64,
+        seed: u64,
+        layout_fingerprint: impl Into<String>,
+        method: IntegrationMethod,
+        error_metric: ErrorMetric,
+        adaptive: bool,
+        step_tolerance: f64,
+        dt_min: f64,
+        dt_max: f64,
+        safety_factor: f64,
+        seed_algorithm_version: u32,
+    ) -> Self {
+        Self {
+            schema_version: 1,
+            time,
+            proposed_dt,
+            accepted_steps,
+            rejected_steps,
+            seed,
+            layout_fingerprint: layout_fingerprint.into(),
+            method,
+            error_metric,
+            adaptive,
+            step_tolerance,
+            dt_min,
+            dt_max,
+            safety_factor,
+            seed_algorithm_version,
+        }
+    }
     /// Encode metadata as stable JSON for a later schema envelope.
     pub fn to_json(&self) -> Result<String, EvolutionError> {
         serde_json::to_string(self)
@@ -299,6 +338,14 @@ impl EvolutionMetadata {
     /// Return whether adaptive acceptance is enabled.
     pub fn adaptive(&self) -> bool {
         self.adaptive
+    }
+    /// Return the adaptive error metric.
+    pub fn error_metric(&self) -> ErrorMetric {
+        self.error_metric
+    }
+    /// Return the evolution master seed.
+    pub fn seed(&self) -> u64 {
+        self.seed
     }
     /// Return the adaptive tolerance.
     pub fn step_tolerance(&self) -> f64 {

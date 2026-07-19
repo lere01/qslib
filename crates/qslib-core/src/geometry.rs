@@ -29,6 +29,13 @@ pub enum GeometryError {
         /// Site used at both endpoints.
         site: SiteId,
     },
+    /// A serialized bond is not in canonical endpoint or source form.
+    NonCanonicalBond {
+        /// First endpoint supplied by the caller.
+        first: SiteId,
+        /// Second endpoint supplied by the caller.
+        second: SiteId,
+    },
     /// A site identifier is outside this geometry.
     SiteOutOfRange {
         /// Invalid site identifier.
@@ -65,6 +72,12 @@ impl Display for GeometryError {
             Self::SelfBond { site } => {
                 write!(formatter, "site {} cannot form a self-bond", site.get())
             }
+            Self::NonCanonicalBond { first, second } => write!(
+                formatter,
+                "bond endpoints {} and {} are not in canonical form",
+                first.get(),
+                second.get()
+            ),
             Self::SiteOutOfRange { site, site_count } => write!(
                 formatter,
                 "site {site} is outside a {site_count}-site geometry"
@@ -248,6 +261,34 @@ impl Bond {
             source: first,
             direction_x: 0,
             direction_y: 0,
+        })
+    }
+
+    /// Reconstruct a canonical bond from its complete serialized identity.
+    ///
+    /// This constructor is intended for durable artifact adapters. The
+    /// endpoints must already be in canonical order; no site-order conversion
+    /// or periodic-image reinterpretation is performed implicitly.
+    pub fn from_parts(
+        first: SiteId,
+        second: SiteId,
+        image_x: i32,
+        image_y: i32,
+        source: SiteId,
+        direction_x: i8,
+        direction_y: i8,
+    ) -> Result<Self, GeometryError> {
+        if first >= second || (source != first && source != second) {
+            return Err(GeometryError::NonCanonicalBond { first, second });
+        }
+        Ok(Self {
+            first,
+            second,
+            image_x,
+            image_y,
+            source,
+            direction_x,
+            direction_y,
         })
     }
 

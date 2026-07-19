@@ -599,11 +599,14 @@ fn jacobi_rotate(a: &mut [f64], vectors: &mut [Vec<f64>], n: usize, p: usize, q:
         a[p * n + k] = c * apk - s * aqk;
         a[q * n + k] = s * apk + c * aqk;
     }
-    for component in 0..n {
-        let vkp = vectors[p][component];
-        let vkq = vectors[q][component];
-        vectors[p][component] = c * vkp - s * vkq;
-        vectors[q][component] = s * vkp + c * vkq;
+    let (before_q, from_q) = vectors.split_at_mut(q);
+    let p_vector = &mut before_q[p];
+    let q_vector = &mut from_q[0];
+    for (p_component, q_component) in p_vector.iter_mut().zip(q_vector.iter_mut()) {
+        let old_p = *p_component;
+        let old_q = *q_component;
+        *p_component = c * old_p - s * old_q;
+        *q_component = s * old_p + c * old_q;
     }
 }
 fn residual_norm(

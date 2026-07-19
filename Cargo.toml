@@ -47,6 +47,10 @@ rand_chacha = "0.10.0"
 rand_core = "0.10.1"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.150"
+serde_yaml_ng = "0.10.0"
+parquet = { version = "59.1.0", default-features = false, features = ["arrow"] }
+arrow-array = "59.1.0"
+arrow-schema = "59.1.0"
 
 [features]
 default = []

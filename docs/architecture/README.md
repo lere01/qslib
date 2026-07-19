@@ -133,13 +133,22 @@ commit only accepted states, derive deterministic stage seeds, expose
 accepted-only observation boundaries, and serialize checkpoint-compatible
 evolution metadata. See the [`../evolution.md`](../evolution.md) contract.
 
-Milestone 10 is migrating the standalone SSE backend onto canonical qslib
+Milestone 10 migrated the standalone SSE backend onto canonical qslib
 bits, explicit weighted local terms, trace-checked operator strings, and
 sign-safe thermodynamic estimators. SSE chains use the shared ADR-0003
 versioned BLAKE3/ChaCha20 seed derivation and expose worker-count-invariant
 logical chain results. Legacy model adapters remain model-aware; the
 ambiguous standalone `Spin` meaning is not part of qslib. See the
 [`../sse.md`](../sse.md) contract.
+
+Milestone 11 completes the durable IO boundary in `qslib-io`: strict versioned
+JSON/YAML configuration, BLAKE3-bound manifests and checkpoints, atomic writes,
+validated columnar trajectory tables, and Apache Parquet part output. Scientific
+conventions, resolved coefficients, tolerances, dtype, backend, and RNG
+provenance remain explicit serialized fields. Checkpoint envelopes carry typed
+accepted evolution controls, exact named NPY arrays, and recoverable completion
+metadata; an independent Python verifier exercises NPY, Parquet, and checksum
+readers in CI.
 
 ## Development architecture
 

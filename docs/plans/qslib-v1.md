@@ -124,10 +124,13 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   SSE algorithms on canonical qslib types. Architect review gates cover
   versioned chain seeds, explicit legacy adapters, independent-chain thermal
   confidence, worker-count determinism, cutoff safety, and parity fixtures.
-- [ ] In progress: Milestone 11 implements versioned configuration, artifacts,
-  and checkpoints.
-- [ ] Complete Milestone 11: implement versioned configuration, artifacts, and
-  checkpoint schemas.
+- [x] (2026-07-19 23:51Z) Completed Milestone 11: implemented strict versioned
+  configuration, resolved-model reconstruction, manifests, summaries,
+  checkpoint envelopes with typed evolution/RNG state and named NPY arrays,
+  immutable Parquet trajectory parts with recoverable completion markers,
+  legacy migration errors, and an independent Python artifact verifier. Rust
+  1.85/stable workspace tests, Clippy, rustdoc, cargo-deny, and focused IO,
+  checkpoint-resume, and Python-reader gates pass.
 - [ ] Complete Milestone 12: implement Python bindings and ncli parity adapters.
 - [ ] Complete Milestone 13: implement the physicist-first command line.
 - [ ] Complete Milestone 14: complete guides, examples, API documentation, and
@@ -239,6 +242,15 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   expose missing untracked governance or agent files before the first commit.
   Evidence: `git checkout-index --all` produced an isolated candidate under
   `/private/tmp`; both Rust toolchains and all integrity checks passed there.
+- Observation: a checkpoint envelope that merely labels opaque bytes is not a
+  restart contract.
+  Evidence: architect review required typed accepted-state and RNG metadata,
+  complete evolution controls, exact array sets, bounded next steps, and a
+  real `EvolutionDriver::from_parts` continuation test before M11 closure.
+- Observation: Parquet completion is a two-file transaction boundary.
+  Evidence: the completed manifest can be durable before its marker; `load`
+  now revalidates immutable parts and repairs a missing or incorrect marker,
+  and the recovery test exercises that interrupted state.
 
 ## Decision log
 
@@ -354,6 +366,19 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   zero/one values remain distinct from Rydberg occupation and legacy spin
   labels, while numerical code has one reference scalar policy.
   Date/author: 2026-07-19, primary agent after qslib-architect review.
+- Decision: make resolved IO reconstruction lossless for serialized physical
+  semantics by applying interaction multiplicity, restoring physical constants,
+  and rejecting duplicate onsite roles at one site.
+  Rationale: a seed or positional coefficient list cannot reconstruct a unique
+  Hamiltonian; the durable term table must determine the same operator.
+  Date/author: 2026-07-19, primary agent after qslib-architect review.
+- Decision: checkpoint accepted-state metadata stores the complete trajectory
+  controls and treats RNG position as complete 64-byte ChaCha20 blocks, with
+  explicit conversion to the 16-word stream position.
+  Rationale: `EvolutionDriver::from_parts` compares every trajectory-changing
+  control, and durable restart must reject unsupported seed derivation versions
+  rather than silently reinterpret them.
+  Date/author: 2026-07-19, primary agent after qslib-architect review.
 
 ## Outcomes and retrospective
 
@@ -390,6 +415,17 @@ errors. Milestone 3 is complete: its red-to-green tests cover geometry,
 boundaries, canonical bonds, pair-dependent interactions, disorder provenance,
 parity adapters, and anisotropic closest-vector cases. Milestone 4 now starts
 with operator channels, Hamiltonian term assembly, and model constructors.
+
+Milestones 4 through 10 are also complete, covering canonical Hamiltonians,
+symmetry sectors, exact spectra and dynamics, observables and statistics,
+variational/TDVP kernels, transactional integration, and the migrated SSE
+backend. Milestone 11 is complete: physicists can now persist strict resolved
+configurations and summaries, bind artifacts to conventions and checksums,
+write portable checkpoint arrays and typed restart metadata, append immutable
+Parquet trajectories, recover interrupted dataset publication, and verify the
+result independently from Python. Milestone 12 is the next active boundary;
+publication and remote repository changes remain intentionally outside this
+autonomous run.
 
 ## Context and orientation
 
