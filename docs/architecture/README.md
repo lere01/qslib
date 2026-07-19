@@ -116,6 +116,11 @@ Hamiltonian matrices, residual-reporting Hermitian diagonalization, exact
 thermal sums, and spectral real- or imaginary-time evolution. See the
 [`../exact.md`](../exact.md) contract and its independent small-system tests.
 
+Milestone 7 adds normalized exact pure-state expectation and variance,
+weighted online real and complex moments, autocorrelation and effective sample
+size diagnostics, classic R-hat, and disorder-realization aggregation. See
+the [`../observables-statistics.md`](../observables-statistics.md) contract.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:

@@ -939,3 +939,37 @@ pub fn evolve(
     }
     Ok(result)
 }
+
+/// Evaluate a normalized pure-state expectation value for a matrix observable.
+pub fn expectation(matrix: &DenseMatrix, state: &[Complex64]) -> Result<Complex64, ExactError> {
+    if state.len() != matrix.dimension {
+        return Err(ExactError::Shape {
+            expected: matrix.dimension,
+            actual: state.len(),
+        });
+    }
+    let norm_squared = dot(state, state).re;
+    if !norm_squared.is_finite() || norm_squared == 0.0 {
+        return Err(ExactError::InvalidParameter("state norm"));
+    }
+    let applied = matrix.apply(state)?;
+    Ok(dot(state, &applied) / norm_squared)
+}
+
+/// Evaluate the normalized pure-state variance of a Hermitian matrix observable.
+pub fn variance(matrix: &DenseMatrix, state: &[Complex64]) -> Result<Complex64, ExactError> {
+    if state.len() != matrix.dimension {
+        return Err(ExactError::Shape {
+            expected: matrix.dimension,
+            actual: state.len(),
+        });
+    }
+    let norm_squared = dot(state, state).re;
+    if !norm_squared.is_finite() || norm_squared == 0.0 {
+        return Err(ExactError::InvalidParameter("state norm"));
+    }
+    let applied = matrix.apply(state)?;
+    let twice_applied = matrix.apply(&applied)?;
+    let mean = dot(state, &applied) / norm_squared;
+    Ok(dot(state, &twice_applied) / norm_squared - mean * mean)
+}

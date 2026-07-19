@@ -821,6 +821,20 @@ gate passes when exact observables match direct matrix evaluation, online and
 batch accumulation agree, correlated-chain diagnostics detect a constructed
 failure, and disorder uncertainty remains separate from sampling uncertainty.
 
+Execution record (2026-07-19): the M7 statistics and exact-observable tests were
+added before production implementation. The focused Rust 1.85 run first failed
+with unresolved weighted-moment, complex-statistics, autocorrelation, R-hat,
+disorder-aggregation, expectation, and variance APIs, which is the intended red
+state.
+
+Implementation record (2026-07-19): `qslib-quantum-variational` now provides
+stable weighted real and complex online moments, merge invariance,
+initial-positive-sequence autocorrelation with effective sample size, classic
+R-hat, and disorder-realization aggregation that retains identifiers and
+between-realization variance. `qslib-quantum-exact` provides normalized pure
+state expectation and variance evaluators. Focused tests are green; architect
+closure review is pending.
+
 ### Milestone 8: variational and TDVP numerical core
 
 Define interfaces that accept samples, normalized or unnormalized weights,

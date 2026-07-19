@@ -408,3 +408,24 @@ fn tfim_neutral_fixture_matrix_entries_match_the_independent_reference() {
         assert_eq!(actual.im, 0.0);
     }
 }
+
+#[test]
+fn exact_expectation_and_variance_match_direct_matrix_evaluation() {
+    let h = Hamiltonian::new_hermitian(
+        SiteCount::new(1).unwrap(),
+        Complex64::new(0.0, 0.0),
+        vec![(
+            Complex64::new(1.0, 0.0),
+            PauliString::new(vec![(SiteId::new(0), Pauli::Z)]).unwrap(),
+        )],
+    )
+    .unwrap();
+    let basis = ExactBasis::full(SiteCount::new(1).unwrap()).unwrap();
+    let matrix = qslib_exact::DenseMatrix::from_hamiltonian(&h, &basis).unwrap();
+    let state = vec![
+        Complex64::new(2.0_f64.sqrt().recip(), 0.0),
+        Complex64::new(2.0_f64.sqrt().recip(), 0.0),
+    ];
+    assert!(qslib_exact::expectation(&matrix, &state).unwrap().norm() < 1.0e-12);
+    assert!((qslib_exact::variance(&matrix, &state).unwrap().re - 1.0).abs() < 1.0e-12);
+}
