@@ -115,10 +115,13 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   streamed QGT operations, fixed/GCV/spectral regularization, clipping, residual
   diagnostics, typed solver provenance, and BLAKE3 parameter-layout fingerprints.
   Architect closure review approved; the complete workspace quality suite passes.
-- [ ] In progress: Milestone 9 implements transactional real- and imaginary-time
-  integration and checkpointable evolution state.
-- [ ] Complete Milestone 9: implement transactional real- and imaginary-time
-  integration and checkpointable evolution state.
+- [x] (2026-07-19) Completed Milestone 9: implemented transactional Euler and
+  Heun evolution, adaptive Euclidean/QGT acceptance, deterministic retry-safe
+  stage seeds, accepted-only observations, overflow-safe commits, and complete
+  checkpoint metadata/configuration validation. Architect closure review
+  approved; the complete workspace quality suite passes.
+- [ ] In progress: Milestone 10 migrates and reconciles the supported SSE
+  algorithms.
 - [ ] Complete Milestone 10: migrate and reconcile the supported SSE algorithms.
 - [ ] Complete Milestone 11: implement versioned configuration, artifacts, and
   checkpoint schemas.
@@ -891,6 +894,16 @@ resume equivalence tests, RNG-stream tests, and exact small-quench comparisons
 first. The gate passes when an interrupted and resumed evolution produces the
 same accepted trajectory and diagnostics as an uninterrupted run under the
 declared reproducibility policy.
+
+Implementation record (2026-07-19): `qslib-quantum-variational` now exposes
+checked flat-state Euler and Heun drivers with deterministic stage seeds,
+adaptive growth and shrinkage, scale-relative QGT metric validation, complete
+JSON checkpoint metadata, accepted-boundary observations, and transactional
+rollback. Independent tests cover analytic one-step values, second-order
+convergence, QGT norms and indefinite spectra, actual rejection seed invariance,
+overflow-safe failure behavior, and adaptive interrupted/resumed trajectories.
+Architect closure review approved; workspace tests, Clippy, rustdoc, formatting,
+and diff checks pass.
 
 ### Milestone 10: SSE migration
 
