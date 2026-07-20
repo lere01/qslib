@@ -173,7 +173,7 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   Markdown/Rust API site, a portable workspace source archive plus the core
   Cargo package, license/readme/changelog/release-evidence files, and relative
   checksums are available under
-  `/private/tmp/qslib-release-candidate-20260720f`. It includes a Python sdist,
+  `/private/tmp/qslib-release-candidate-20260720h`. It includes a Python sdist,
   explicit `RELEASE_NOTES.md`, source revision/toolchain metadata, and a
   regenerated core Cargo package. Its checksum manifest uses `./...` relative
   paths, passes in place and after relocation, and covers the binary, wheel,
