@@ -38,7 +38,11 @@ implementation snapshot. It is not a publication or a release authorization.
 - Packaging: the ABI3 wheel and Maturin source distribution both install in a
   temporary environment; each runs the ten Python contract tests and the exact
   four-site example. The current bundle is
-  `/private/tmp/qslib-release-candidate-20260720l`.
+  `/private/tmp/qslib-release-candidate-20260720m`.
+- Revalidation (2026-07-20 09:58Z): the full Rust 1.85 workspace test matrix,
+  stable Clippy and rustdoc with warnings denied, formatting, all facade
+  feature boundaries, conformance/workspace harnesses, Markdown links, and CI
+  YAML parsing passed on the clean source revision used for the current bundle.
 - Checksums: `SHA256SUMS` is generated from inside the bundle with `./...`
   relative paths and verifies both in place and after relocation.
 

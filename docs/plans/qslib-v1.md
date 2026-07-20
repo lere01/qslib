@@ -181,6 +181,14 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   captured exact/SSE JSON smoke outputs. Clean wheel, sdist, and CLI smoke runs
   pass. This is a 0.1.0 candidate; version 1.0.0 remains prohibited until
   every acceptance gate passes.
+- [x] (2026-07-20 09:58Z) Revalidated the clean release revision with the full
+  Rust 1.85 workspace test matrix, stable Clippy and rustdoc with warnings
+  denied, formatting, all facade feature boundaries, conformance/workspace
+  harnesses, Markdown links, and CI YAML parsing. The local candidate was
+  rebuilt as `/private/tmp/qslib-release-candidate-20260720m`; its exact and
+  SSE JSON outputs parse, and its relative checksum manifest verifies in place
+  and after relocation. Hosted cross-platform CI and ncli parity remain owner
+  gates.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.
