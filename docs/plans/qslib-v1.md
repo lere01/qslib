@@ -142,7 +142,14 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   Rust 1.85/stable tests, Clippy, rustdoc, formatting, and cargo-deny pass.
   M12 remains open only for the cross-platform CI evidence and the separately
   owned ncli backend-selection/parity adapter.
-- [ ] Complete Milestone 12: implement Python bindings and ncli parity adapters.
+- [x] (2026-07-20 10:20Z) Completed the separately owned ncli parity portion of
+  M12. The parent repository now has an explicit `QslibExactBackend` adapter,
+  structured unavailable/contract errors, optional `ncli[qslib]` packaging,
+  documented backend selection, and specification-first TFIM, signed J1-J2,
+  Rydberg, missing-dependency, and exact-spectrum parity tests. The adapter
+  leaves ncli's native backend as the default and validates the canonical
+  little-endian basis, resolved pair coefficients, matrix shape, finiteness,
+  and symmetry contract.
 - [x] (2026-07-20 01:25Z) Completed qslib-local Milestone 13: the CLI now
   uses qslib-io's strict Parquet dataset loader for artifact inspection, rejects
   unknown or unversioned configuration fields, validates model-specific fields
@@ -189,6 +196,22 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   SSE JSON outputs parse, and its relative checksum manifest verifies in place
   and after relocation. Hosted cross-platform CI and ncli parity remain owner
   gates.
+- [x] (2026-07-20 10:20Z) Added the guarded publication-preparation workflow
+  at `.github/workflows/release.yml`. It checks out full Git history, verifies
+  tag/version agreement, reruns the locked workspace suite, builds the CLI,
+  core Cargo package, source archive, ABI3 wheel/sdist, combined docs, release
+  metadata, and relative SHA256 manifest, then uploads one reviewable artifact.
+  GitHub release creation is a separate manual job requiring a checked-out
+  `v*` tag and an explicit `publish` input, so local work and ordinary tag CI
+  never publish implicitly. The workflow also avoids the prior `gh release`
+  failure mode by checking out the repository in the release job.
+- [x] (2026-07-20 10:30Z) Corrected the hosted Rust matrix to exclude the
+  Python cdylib from Cargo check/test/Clippy/docs/coverage jobs, matching the
+  established Maturin-only packaging boundary. The local macOS workspace run
+  reproduced the unresolved-Python-symbol failure when that exclusion was
+  omitted; the excluded Rust workspace matrix then passed all tests. Python
+  wheel and source-distribution validation remains in the dedicated Maturin
+  jobs on all three hosted operating systems.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.

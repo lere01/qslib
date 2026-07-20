@@ -39,19 +39,29 @@ implementation snapshot. It is not a publication or a release authorization.
   temporary environment; each runs the ten Python contract tests and the exact
   four-site example. The current bundle is
   `/private/tmp/qslib-release-candidate-20260720m`.
+  That local bundle predates the 10:20Z workflow and evidence edits; the
+  guarded release workflow is the reproducible path for rebuilding a bundle
+  from the current revision.
 - Revalidation (2026-07-20 09:58Z): the full Rust 1.85 workspace test matrix,
   stable Clippy and rustdoc with warnings denied, formatting, all facade
   feature boundaries, conformance/workspace harnesses, Markdown links, and CI
   YAML parsing passed on the clean source revision used for the current bundle.
+- ncli parity (2026-07-20 10:20Z): the separately owned parent repository has
+  an explicit optional qslib backend with TFIM, signed J1-J2, Rydberg, and exact
+  spectrum parity tests. Its native backend remains the default.
+- Publication preparation (2026-07-20 10:20Z): `.github/workflows/release.yml`
+  defines a guarded artifact build and a manual, tag-checked GitHub release job.
 - Checksums: `SHA256SUMS` is generated from inside the bundle with `./...`
   relative paths and verifies both in place and after relocation.
 
 ## Known external gates
 
 The remote Linux/macOS/Windows CI matrix is authored but not executed in this
-local-only workflow. The local semver comparison above does not replace a
-Linux registry or release-baseline check. The ncli backend-selection/parity
-adapter remains a separate ownership unit.
+local-only workflow. Its Rust jobs explicitly exclude the Python cdylib, which
+is built and tested through Maturin jobs on all three platforms. The local
+semver comparison above does not replace a
+Linux registry or release-baseline check. The ncli adapter remains a separate
+ownership unit and must be validated in its own repository's CI.
 The Python cdylib is packaged through Maturin; a workspace-wide Cargo release
 link is not a supported way to build that extension on macOS.
 

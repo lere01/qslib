@@ -27,9 +27,10 @@ wheel/sdist smoke tests, and a checksum-verified local artifact bundle.
 
 ## Remaining 1.0 gates
 
-Remote Linux/macOS/Windows CI execution and coordinated ncli backend adoption
-remain outside this local-only run. Do not tag, publish, sign, deploy, push, or
-pull this candidate without explicit owner authorization. Consult
+Remote Linux/macOS/Windows CI execution remains outside this local-only run.
+The separately owned ncli repository now contains an opt-in qslib exact backend
+and focused parity tests. Do not tag, publish, sign, deploy, push, or pull this
+candidate without explicit owner authorization. Consult
 [`docs/plans/qslib-v1.md`](docs/plans/qslib-v1.md) and
 [`docs/release-evidence.md`](docs/release-evidence.md) for exact evidence and
 known limitations.
