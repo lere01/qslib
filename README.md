@@ -17,13 +17,15 @@ choices are recorded as [architectural decision records](docs/decisions/README.m
 The living [qslib 1.0 execution plan](docs/plans/qslib-v1.md), governed by
 [`PLANS.md`](PLANS.md), defines the implementation milestones and completion
 criteria for autonomous development.
+The [documentation index](docs/index.md) collects the physicist-first guides
+and the locally generated Rust API reference entry point.
 
 The current Cargo workspace exposes the `qslib` facade, while capability crates
 isolate core, exact, variational, SSE, IO, CLI, Python, and test-support
-responsibilities. The core crate now implements the checked basis, geometry,
-weighted-interaction, and disorder foundations described by the completed
-Milestones 2 and 3. Model assembly and numerical algorithms remain later
-milestones.
+responsibilities. The Rust backends implement checked basis and geometry,
+heterogeneous model assembly, exact solvers and observables, TDVP, SSE, and
+versioned scientific artifacts. The [CLI guide](docs/cli.md) and
+[Python guide](docs/python.md) describe the current user-facing boundaries.
 
 ## Workspace and features
 
@@ -53,6 +55,8 @@ For operator action, Hamiltonian signs, basis rotations, and model constructors,
 see the [operators and models guide](docs/operators-models.md).
 For gather-direction site permutations, lattice groups, spin inversion, and
 projection, see the [symmetry guide](docs/symmetry.md).
+For command-line configuration and physically labelled output, see the
+[CLI guide](docs/cli.md).
 
 ## Project policies
 

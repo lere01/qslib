@@ -14,5 +14,12 @@ name = "qslib"
 path = "src/main.rs"
 doc = false
 
+[lib]
+name = "qslib_cli"
+path = "src/lib.rs"
+
 [dependencies]
 qslib = { package = "qslib-quantum", version = "0.1.0", path = "../..", features = ["exact", "sse", "io"] }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml_ng.workspace = true

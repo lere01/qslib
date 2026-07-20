@@ -157,6 +157,12 @@ returns owned arrays from validated coarse-grained geometry, coupling,
 exact-basis, TFIM, Heisenberg, and Rydberg kernels. Core and solver crates do
 not depend on Python, and Python buffers are never retained after a call.
 
+The qslib-local CLI boundary is implemented in `qslib-quantum-cli`. It parses
+only public, versioned scientific inputs, delegates model construction and
+solvers to the facade, and keeps presentation concerns in the CLI crate.
+Machine-readable JSON and physicist-labelled text are both supported; the CLI
+does not introduce alternate Hamiltonian or site-order semantics.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:

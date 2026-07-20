@@ -1,0 +1,10 @@
+# Four-site transverse-field Ising model in the canonical z simulation basis.
+# H = -sum_<ij> J_ij sigma^z_i sigma^z_j - sum_i h_i sigma^x_i.
+model: tfim
+basis: z
+couplings:
+  - [0.0, 1.0, 0.0, 1.0]
+  - [1.0, 0.0, 1.0, 0.0]
+  - [0.0, 1.0, 0.0, 1.0]
+  - [1.0, 0.0, 1.0, 0.0]
+fields: [0.5, 0.5, 0.5, 0.5]

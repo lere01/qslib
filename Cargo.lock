@@ -629,6 +629,9 @@ name = "qslib-quantum-cli"
 version = "0.1.0"
 dependencies = [
  "qslib-quantum",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
 ]
 
 [[package]]

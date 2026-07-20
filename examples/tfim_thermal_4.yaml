@@ -1,0 +1,19 @@
+# Tiny SSE demonstration. Reduce the sweep counts only for a quick smoke run;
+# production estimates require thermalization, autocorrelation, and confidence
+# analysis appropriate to the physical question.
+model: tfim
+basis: z
+couplings:
+  - [0.0, 1.0, 0.0, 1.0]
+  - [1.0, 0.0, 1.0, 0.0]
+  - [0.0, 1.0, 0.0, 1.0]
+  - [1.0, 0.0, 1.0, 0.0]
+fields: [0.5, 0.5, 0.5, 0.5]
+beta: 1.0
+thermalization_sweeps: 5
+measurement_sweeps: 20
+sweeps_per_measurement: 1
+chains: 2
+workers: 2
+seed: 2301
+operator_cutoff: 128

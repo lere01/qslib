@@ -143,7 +143,12 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   M12 remains open only for the cross-platform CI evidence and the separately
   owned ncli backend-selection/parity adapter.
 - [ ] Complete Milestone 12: implement Python bindings and ncli parity adapters.
-- [ ] Complete Milestone 13: implement the physicist-first command line.
+- [x] (2026-07-20 01:02Z) Completed qslib-local Milestone 13: implemented the
+  physicist-first `qslib` command with convention and environment inspection,
+  YAML/JSON model validation, exact ground-state and real/imaginary-time
+  evolution, TFIM SSE smoke runs, artifact inspection, and conformance
+  self-tests. JSON and human output, physical-field errors, four-site exact
+  examples, and the tiny SSE example are covered by CLI tests.
 - [ ] Complete Milestone 14: complete guides, examples, API documentation, and
   the local documentation site.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
@@ -396,6 +401,11 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   explicit, and gives ncli a stable backend boundary before TDVP and broader
   parity adapters are added.
   Date/author: 2026-07-20, primary agent after ADR-0005 and M12 inventory.
+- Decision: CLI configuration uses YAML or JSON with one explicit dense
+  coupling matrix and model-specific site arrays; every upper-triangle entry
+  remains a resolved pair coefficient, including zero values. This keeps
+  pair-dependent disorder and normalization visible at the command boundary.
+  Date/author: 2026-07-20, primary agent after M13 contract tests.
 
 ## Outcomes and retrospective
 
@@ -450,7 +460,10 @@ pair-dependent couplings, reports convention-labelled observables, and
 reproduces exact TFIM, Heisenberg, and Rydberg matrix behavior through owned
 NumPy outputs. Cross-platform wheel jobs are authored but cannot run until CI
 executes, and ncli backend adoption remains a separate ownership boundary
-that must not modify the parent repository without explicit authority.
+that must not modify the parent repository without explicit authority. The
+qslib-local CLI milestone is now complete: documented four-site and tiny SSE
+commands execute through public kernels, and JSON output is tested as a stable
+machine-facing surface.
 
 ## Context and orientation
 
