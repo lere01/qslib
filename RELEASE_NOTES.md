@@ -23,7 +23,9 @@ The local evidence includes Rust 1.85 and stable workspace tests, strict
 Clippy and rustdoc checks, cargo-deny and cargo-audit policy checks, bounded
 CLI and state-conversion fuzzing, core Miri tests on nightly Rust, branch
 coverage, semver comparison against the previous local candidate, clean Python
-wheel/sdist smoke tests, and a checksum-verified local artifact bundle.
+wheel/sdist smoke tests, and a checksum-verified local artifact bundle. The
+publication workflow repeats clean wheel/sdist installation, CLI smoke tests,
+and checksum verification before any manual release job can run.
 
 ## Remaining 1.0 gates
 

@@ -213,6 +213,16 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   omitted; the excluded Rust workspace matrix then passed all tests. Python
   wheel and source-distribution validation remains in the dedicated Maturin
   jobs on all three hosted operating systems.
+- [x] (2026-07-20 10:45Z) Hardened the ncli parity boundary after architectural
+  review: qslib dense construction now performs a 256 MiB preflight before the
+  binding call, rejects nonzero Rydberg interaction diagonals, rejects
+  non-Hermitian results, distinguishes missing qslib from broken internal
+  imports, and includes an asymmetric three-site site-order fixture. The
+  release workflow now clean-packages the core crate, installs and exercises
+  both wheel and sdist in isolated environments, smoke-tests the CLI, and
+  verifies SHA256SUMS before upload. Parent ncli CI now builds the qslib wheel
+  and runs parity as a required non-skipping matrix on Linux, macOS, and
+  Windows. Hosted execution remains the only external observation gate.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.

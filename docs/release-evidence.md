@@ -48,9 +48,14 @@ implementation snapshot. It is not a publication or a release authorization.
   YAML parsing passed on the clean source revision used for the current bundle.
 - ncli parity (2026-07-20 10:20Z): the separately owned parent repository has
   an explicit optional qslib backend with TFIM, signed J1-J2, Rydberg, and exact
-  spectrum parity tests. Its native backend remains the default.
+  spectrum parity tests. Its native backend remains the default. The adapter
+  preflights a 256 MiB dense budget, rejects nonzero Rydberg diagonals and
+  non-Hermitian outputs, and the parent workflow installs qslib and marks the
+  parity tests required on all three hosted operating systems.
 - Publication preparation (2026-07-20 10:20Z): `.github/workflows/release.yml`
   defines a guarded artifact build and a manual, tag-checked GitHub release job.
+  The build clean-installs and exercises wheel/sdist artifacts, smoke-tests the
+  CLI, and verifies the generated checksum manifest before upload.
 - Checksums: `SHA256SUMS` is generated from inside the bundle with `./...`
   relative paths and verifies both in place and after relocation.
 

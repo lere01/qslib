@@ -45,15 +45,29 @@ jobs:
             exit 1
           fi
           rm -rf dist
+          rm -rf "$RUNNER_TEMP/qslib-package"
+          mkdir -p "$RUNNER_TEMP/qslib-package"
+          cargo +stable package --locked -p qslib-quantum-core --out-dir "$RUNNER_TEMP/qslib-package"
           mkdir -p dist/bin dist/rust-source dist/wheels dist/docs
           cargo +stable test --locked --workspace --exclude qslib-quantum-python --all-targets --all-features
           cargo +stable build --locked --release -p qslib-quantum-cli
           cp target/release/qslib dist/bin/qslib
-          cargo +stable package --locked -p qslib-quantum-core --allow-dirty --no-verify --out-dir dist/rust-source
+          cp "$RUNNER_TEMP"/qslib-package/*.crate dist/rust-source/
           git archive --format=tar.gz --prefix="qslib-$version/" HEAD > "dist/rust-source/qslib-$version-source.tar.gz"
           python3 -m pip install --disable-pip-version-check maturin pytest numpy
           maturin build --locked --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
           maturin sdist --locked --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
+          python3 -m venv "$RUNNER_TEMP/qslib-wheel-venv"
+          "$RUNNER_TEMP/qslib-wheel-venv/bin/pip" install --disable-pip-version-check \
+            dist/wheels/*.whl pytest numpy
+          "$RUNNER_TEMP/qslib-wheel-venv/bin/pytest" -q crates/qslib-python/tests/python_contract.py
+          "$RUNNER_TEMP/qslib-wheel-venv/bin/python" examples/python_exact_ground_state.py
+          python3 -m venv "$RUNNER_TEMP/qslib-sdist-venv"
+          "$RUNNER_TEMP/qslib-sdist-venv/bin/pip" install --disable-pip-version-check \
+            dist/wheels/*.tar.gz pytest numpy
+          "$RUNNER_TEMP/qslib-sdist-venv/bin/pytest" -q crates/qslib-python/tests/python_contract.py
+          "$RUNNER_TEMP/qslib-sdist-venv/bin/python" examples/python_exact_ground_state.py
+          dist/bin/qslib --help
           python3 tools/build_docs_site.py dist/docs
           cp README.md LICENSE RELEASE_NOTES.md dist/
           cp docs/release-evidence.md dist/
@@ -61,6 +75,7 @@ jobs:
             bin rust-source wheels docs LICENSE README.md RELEASE_NOTES.md release-evidence.md
           printf 'qslib version: %s\ncommit: %s\n' "$version" "$(git rev-parse HEAD)" > dist/BUILD_METADATA.txt
           (cd dist && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > SHA256SUMS)
+          (cd dist && shasum -a 256 -c SHA256SUMS)
       - name: Upload release candidate for review
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
