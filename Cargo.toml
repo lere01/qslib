@@ -17,6 +17,12 @@ categories = ["science", "simulation"]
 name = "qslib"
 path = "src/lib.rs"
 
+[[bench]]
+name = "kernels"
+path = "benches/kernels.rs"
+harness = false
+required-features = ["exact", "variational", "sse"]
+
 [workspace]
 members = [
     ".",

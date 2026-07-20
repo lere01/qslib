@@ -1,0 +1,9 @@
+[book]
+title = "qslib: quantum simulation for physicists"
+authors = ["qslib contributors"]
+language = "en"
+src = "docs"
+
+[output.html]
+site-url = "/qslib/"
+git-repository-url = "https://github.com/lere01/qslib"

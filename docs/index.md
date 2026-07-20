@@ -22,6 +22,11 @@ through Rust, the command line, and Python.
 - [SSE](sse.md) - sign-safe finite-temperature sampling.
 - [IO](io.md) - versioned configurations, checkpoints, and trajectories.
 - [Symmetry](symmetry.md) - site permutations, characters, and projections.
+- [Reproducibility](reproducibility.md) - provenance, seeds, checksums, and
+  uncertainty.
+- [Limitations](limitations.md) - finite-system scope and numerical caveats.
+- [Migration from ncli](migration-ncli.md)
+- [Migration from standalone SSE](migration-sse.md)
 
 ## API reference
 

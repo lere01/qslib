@@ -149,8 +149,24 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   evolution, TFIM SSE smoke runs, artifact inspection, and conformance
   self-tests. JSON and human output, physical-field errors, four-site exact
   examples, and the tiny SSE example are covered by CLI tests.
-- [ ] Complete Milestone 14: complete guides, examples, API documentation, and
-  the local documentation site.
+- [x] (2026-07-20 01:18Z) Completed qslib-local Milestone 14: added the
+  physics-first documentation index and mdBook summary, CLI/Python guides,
+  reproducibility and limitations guidance, ncli and standalone-SSE migration
+  notes, runnable examples, Markdown link checking, and a combined local
+  Markdown/Rust API site builder. `mdbook build`, `cargo doc`, the link checker,
+  and all documented CLI examples pass locally.
+- [ ] In progress (2026-07-20 01:46Z): M15 hardening now has a reporting
+  benchmark for matrix action, exact diagonalization, expectation values, and
+  TDVP statistics; a bounded configuration-parser fuzz test; full feature,
+  MSRV, stable, Clippy, rustdoc, formatting, cargo-deny, link, mdBook, and
+  LLVM-instrumented test executions. A nightly Miri core job is authored for CI. The
+  remote CI matrix and semver baseline remain unexecuted owner-gated checks.
+- [ ] Local M16 release-candidate preparation (2026-07-20 01:46Z): optimized
+  Rust binaries excluding the Python cdylib, an ABI3 Python wheel, a combined
+  Markdown/Rust API site, license/readme/changelog files, checksums, and clean
+  Python-wheel and CLI smoke runs are available under
+  `/private/tmp/qslib-release-candidate`. This is a 0.1.0 candidate; version
+  1.0.0 remains prohibited until every acceptance gate passes.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.
@@ -267,6 +283,22 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   Evidence: the completed manifest can be durable before its marker; `load`
   now revalidates immutable parts and repairs a missing or incorrect marker,
   and the recovery test exercises that interrupted state.
+
+- Observation: the Python cdylib must be built through Maturin rather than a
+  workspace-wide optimized Cargo link.
+  Evidence: `cargo +1.85.0 build --release --workspace --all-features` tried
+  to link `qslib-quantum-python` as a regular macOS dynamic library and failed
+  on unresolved Python symbols; excluding that binding for the Rust binary
+  build and running `maturin build` produced the validated ABI3 wheel.
+- Observation: the Rust 1.85-compatible `cargo-semver-checks` 0.42.0 tool
+  installs, but its macOS networking client panics before producing an API
+  report because `system-configuration` returns a null object. The workspace
+  therefore has no semver result yet; this needs Linux CI or a tool version
+  that avoids the host-specific panic.
+- Observation: the local Rust 1.85 toolchain does not ship the Miri component.
+  Evidence: `cargo miri --version` reports that `cargo-miri` is unavailable;
+  the repository now authors a nightly Ubuntu Miri job for the core tests so
+  the required safety gate can run on a supported host.
 
 ## Decision log
 
@@ -406,6 +438,11 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   remains a resolved pair coefficient, including zero values. This keeps
   pair-dependent disorder and normalization visible at the command boundary.
   Date/author: 2026-07-20, primary agent after M13 contract tests.
+- Decision: release-candidate Rust builds exclude the Python cdylib target and
+  invoke Maturin separately. This is the supported PyO3 packaging boundary and
+  avoids pretending that an extension module is an ordinary standalone Rust
+  dynamic library on macOS.
+  Date/author: 2026-07-20, primary agent after the optimized-link audit.
 
 ## Outcomes and retrospective
 
@@ -463,7 +500,10 @@ executes, and ncli backend adoption remains a separate ownership boundary
 that must not modify the parent repository without explicit authority. The
 qslib-local CLI milestone is now complete: documented four-site and tiny SSE
 commands execute through public kernels, and JSON output is tested as a stable
-machine-facing surface.
+machine-facing surface. M15 hardening and M16 local artifact preparation are
+in progress. The local release candidate has a reproducible checksum manifest
+and clean-environment smoke evidence, but cross-platform CI, Miri execution,
+semver baseline review, and ncli backend parity remain open gates.
 
 ## Context and orientation
 
@@ -1197,7 +1237,7 @@ At every stopping point, update `Progress`, `Surprises and discoveries`, and the
 
 ## External authority and owner gates
 
-### Current gate status, updated 2026-07-19 17:16Z
+### Current gate status, updated 2026-07-20 01:46Z
 
 Second resume record: on 2026-07-19 the owner resolved every reduced Milestone 0
 gate. Toolchain and dependency downloads plus local commits are authorized.

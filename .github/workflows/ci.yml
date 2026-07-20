@@ -51,6 +51,8 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo +stable doc --locked --workspace --no-deps --all-features
+      - name: Build combined Markdown and Rust API site
+        run: python3 tools/build_docs_site.py "$RUNNER_TEMP/qslib-site"
       - name: Test neutral conformance harness
         run: cargo +stable test --locked -p qslib-test-support --test conventions --test workspace
       - name: Check Markdown links
@@ -126,3 +128,16 @@ jobs:
         run: cargo +stable check --locked -p qslib-quantum --no-default-features --features full
       - name: Audit workspace graph and feature metadata
         run: cargo +stable test --locked -p qslib-test-support --test workspace
+
+  miri-core:
+    name: Miri core safety checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Install nightly Miri
+        run: rustup toolchain install nightly --profile minimal --component miri
+      - name: Run core tests under Miri
+        run: cargo +nightly miri test --locked -p qslib-quantum-core --all-targets

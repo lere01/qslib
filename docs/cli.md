@@ -57,10 +57,10 @@ real time uses \(e^{-iHt}\), and imaginary time uses the normalized
 \(e^{-H\tau}\) convention.
 
 The SSE command is a small-system TFIM demonstration. It reports the mean
-energy per site across independent logical chains. The displayed standard
-error is not an autocorrelation-corrected confidence interval; production
-studies must choose thermalization, sweep, chain, and uncertainty controls for
-the physical question.
+energy per site across independent logical chains. It does not claim an
+autocorrelation-corrected confidence interval; production studies must choose
+thermalization, sweep, chain, and uncertainty controls for the physical
+question.
 
 ## Worked examples
 

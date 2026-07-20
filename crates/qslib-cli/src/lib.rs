@@ -542,4 +542,22 @@ mod tests {
         assert_eq!(value["complete_marker"], true);
         fs::remove_dir_all(directory).unwrap();
     }
+
+    #[test]
+    fn bounded_config_fuzz_never_panics() {
+        for seed in 0_u64..1_000 {
+            let mut state = seed.wrapping_mul(0x9e37_79b9_7f4a_7c15);
+            let mut text = String::with_capacity(64);
+            for _ in 0..64 {
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1);
+                let byte = (state >> 56) as u8;
+                text.push(char::from(b'a' + (byte % 26)));
+            }
+            let result =
+                std::panic::catch_unwind(|| serde_yaml_ng::from_str::<super::ModelInput>(&text));
+            assert!(result.is_ok(), "parser panicked for seed {seed}");
+        }
+    }
 }
