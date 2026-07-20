@@ -1,4 +1,0 @@
-interface:
-  display_name: "qslib Model Audit"
-  short_description: "Audit quantum models and conventions"
-  default_prompt: "Use $qslib-audit-model to audit this qslib model for scientific and API correctness."
