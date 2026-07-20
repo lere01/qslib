@@ -234,6 +234,10 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
 - [ ] (2026-07-20 11:03Z) Rechecked the public GitHub Actions API: the
   repository still reports zero workflow runs. No local or external state has
   changed, so the hosted matrix remains the only unresolved acceptance gate.
+- [x] (2026-07-20 11:04Z) Re-ran the complete local Rust acceptance suite in
+  offline mode with the Python cdylib excluded from ordinary Cargo linking:
+  workspace tests, all targets, all features, conformance, exact, IO, SSE,
+  symmetry, TDVP, statistics, and CLI tests all passed.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.
