@@ -294,11 +294,14 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   to link `qslib-quantum-python` as a regular macOS dynamic library and failed
   on unresolved Python symbols; excluding that binding for the Rust binary
   build and running `maturin build` produced the validated ABI3 wheel.
-- Observation: the Rust 1.85-compatible `cargo-semver-checks` 0.42.0 tool
-  installs, but its macOS networking client panics before producing an API
-  report because `system-configuration` returns a null object. The workspace
-  therefore has no semver result yet; this needs Linux CI or a tool version
-  that avoids the host-specific panic.
+- Observation: the first registry-based `cargo-semver-checks` 0.42.0 attempt
+  on macOS exposed a host-specific `system-configuration` null-object panic,
+  and a subsequent baseline attempt initially needed authorized registry
+  access. A local previous-commit comparison now succeeds without that panic:
+  `cargo semver-checks check-release --package qslib-quantum
+  --baseline-rev 2584261 --release-type patch` reports 165 passes and 12
+  skips. Linux/release-baseline evidence remains useful because this local
+  comparison is not a registry publication check.
 - Observation: the local Rust 1.85 toolchain does not ship the Miri component.
   Evidence: `cargo miri --version` reports that `cargo-miri` is unavailable;
   the repository now authors a nightly Ubuntu Miri job for the core tests so
