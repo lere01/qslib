@@ -65,9 +65,9 @@ For command-line configuration and physically labelled output, see the
 - [Architecture](docs/architecture/README.md)
 - [Architectural decisions](docs/decisions/README.md)
 - [Rust toolchain and MSRV](docs/toolchain-policy.md)
-- [Contributing](CONTRIBUTING.md)
+<!-- - [Contributing](CONTRIBUTING.md)
 - [Code-of-conduct decision](docs/governance/code-of-conduct-decision.md)
-- [Security](SECURITY.md)
+- [Security](SECURITY.md) -->
 - [Changelog](CHANGELOG.md)
 - [Local release notes](RELEASE_NOTES.md)
 - [Apache-2.0 license](LICENSE)
