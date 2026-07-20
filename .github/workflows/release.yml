@@ -45,14 +45,12 @@ jobs:
             exit 1
           fi
           rm -rf dist
-          rm -rf "$RUNNER_TEMP/qslib-package"
-          mkdir -p "$RUNNER_TEMP/qslib-package"
-          cargo +stable package --locked -p qslib-quantum-core --out-dir "$RUNNER_TEMP/qslib-package"
+          cargo +stable package --locked -p qslib-quantum-core
           mkdir -p dist/bin dist/rust-source dist/wheels dist/docs
           cargo +stable test --locked --workspace --exclude qslib-quantum-python --all-targets --all-features
           cargo +stable build --locked --release -p qslib-quantum-cli
           cp target/release/qslib dist/bin/qslib
-          cp "$RUNNER_TEMP"/qslib-package/*.crate dist/rust-source/
+          cp target/package/qslib-quantum-core-*.crate dist/rust-source/
           git archive --format=tar.gz --prefix="qslib-$version/" HEAD > "dist/rust-source/qslib-$version-source.tar.gz"
           python3 -m pip install --disable-pip-version-check maturin pytest numpy
           maturin build --locked --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
