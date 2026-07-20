@@ -40,7 +40,8 @@ implementation snapshot. It is not a publication or a release authorization.
 - Packaging: the ABI3 wheel and Maturin source distribution both install in a
   temporary environment; each runs the ten Python contract tests and the exact
   four-site example. The current bundle is
-  `/private/tmp/qslib-release-final-MmZAR0`, built from commit `61c5138`.
+  `/private/tmp/qslib-release-final-20260720-123232`, built from commit
+  `8e451da`.
   The guarded release workflow is the reproducible path for rebuilding a
   bundle from the current revision.
 - Distribution preparation (2026-07-20): Python packaging metadata now carries
@@ -49,6 +50,10 @@ implementation snapshot. It is not a publication or a release authorization.
   that works in both wheels and source distributions. The release workflow has
   a guarded PyPI trusted-publishing job and builds Linux, macOS, and Windows
   CLI archives with the same archive contract tests.
+- Final local rehearsal (2026-07-20): the current wheel and source distribution
+  each installed into a fresh Python 3.14 environment, passed all ten Python
+  contract tests and the exact ground-state example, and the packaged CLI
+  passed `qslib --help`. The candidate checksum manifest verified in place.
 - Revalidation (2026-07-20 09:58Z): the full Rust 1.85 workspace test matrix,
   stable Clippy and rustdoc with warnings denied, formatting, all facade
   feature boundaries, conformance/workspace harnesses, Markdown links, and CI
