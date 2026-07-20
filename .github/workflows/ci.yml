@@ -172,6 +172,6 @@ jobs:
         with:
           persist-credentials: false
       - name: Install nightly Miri
-        run: rustup toolchain install nightly --profile minimal --component miri
+        run: rustup toolchain install nightly --profile minimal --component miri rust-src
       - name: Run core tests under Miri
         run: cargo +nightly miri test --locked -p qslib-quantum-core --all-targets
