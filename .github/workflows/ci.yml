@@ -51,6 +51,8 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo +stable doc --locked --workspace --exclude qslib-quantum-python --no-deps --all-features
+      - name: Install mdBook
+        run: cargo +stable install mdbook --version 0.5.4 --locked
       - name: Build combined Markdown and Rust API site
         run: python3 tools/build_docs_site.py "$RUNNER_TEMP/qslib-site"
       - name: Test neutral conformance harness
@@ -71,6 +73,8 @@ jobs:
           cargo +stable run --locked -p qslib-quantum-io --example io_artifacts -- "$fixture"
           python3 tools/verify_io_artifacts.py --checkpoint "$fixture/checkpoint" --dataset "$fixture/dataset"
       - name: Build and test the local Python wheel
+        env:
+          RUSTUP_TOOLCHAIN: 1.85.0
         run: |
           python3 -m pip install --disable-pip-version-check maturin pytest numpy
           maturin build --locked --manifest-path crates/qslib-python/Cargo.toml --out "$RUNNER_TEMP/qslib-wheel"
@@ -99,6 +103,8 @@ jobs:
       - name: Install Rust
         run: rustup toolchain install 1.85.0 --profile minimal
       - name: Build ABI3 wheel
+        env:
+          RUSTUP_TOOLCHAIN: 1.85.0
         run: |
           python -m pip install --disable-pip-version-check maturin pytest numpy
           maturin build --locked --manifest-path crates/qslib-python/Cargo.toml --out wheelhouse
@@ -157,7 +163,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install nightly coverage toolchain
-        run: rustup toolchain install nightly --profile minimal --component llvm-tools-preview rust-src
+        run: rustup toolchain install nightly --profile minimal --component llvm-tools-preview --component rust-src
       - name: Install cargo-llvm-cov
         run: cargo +stable install cargo-llvm-cov --version 0.6.21 --locked
       - name: Run branch-enabled workspace coverage (Python cdylib excluded)
@@ -172,6 +178,6 @@ jobs:
         with:
           persist-credentials: false
       - name: Install nightly Miri
-        run: rustup toolchain install nightly --profile minimal --component miri rust-src
+        run: rustup toolchain install nightly --profile minimal --component miri --component rust-src
       - name: Run core tests under Miri
         run: cargo +nightly miri test --locked -p qslib-quantum-core --all-targets

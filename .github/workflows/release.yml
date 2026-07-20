@@ -53,8 +53,8 @@ jobs:
           cp target/package/qslib-quantum-core-*.crate dist/rust-source/
           git archive --format=tar.gz --prefix="qslib-$version/" HEAD > "dist/rust-source/qslib-$version-source.tar.gz"
           python3 -m pip install --disable-pip-version-check maturin pytest numpy
-          maturin build --locked --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
-          maturin sdist --locked --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
+          RUSTUP_TOOLCHAIN=1.85.0 maturin build --locked --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
+          RUSTUP_TOOLCHAIN=1.85.0 maturin sdist --locked --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
           python3 -m venv "$RUNNER_TEMP/qslib-wheel-venv"
           "$RUNNER_TEMP/qslib-wheel-venv/bin/pip" install --disable-pip-version-check \
             dist/wheels/*.whl pytest numpy
@@ -66,6 +66,7 @@ jobs:
           "$RUNNER_TEMP/qslib-sdist-venv/bin/pytest" -q crates/qslib-python/tests/python_contract.py
           "$RUNNER_TEMP/qslib-sdist-venv/bin/python" examples/python_exact_ground_state.py
           dist/bin/qslib --help
+          cargo +stable install mdbook --version 0.5.4 --locked
           python3 tools/build_docs_site.py dist/docs
           cp README.md LICENSE RELEASE_NOTES.md dist/
           cp docs/release-evidence.md dist/

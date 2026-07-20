@@ -33,6 +33,7 @@ docs/governance/target/
 /fuzz/target/
 
 # Local-only agent, governance, and planning metadata.
+.DS_Store
 .agents/
 .codex/
 docs/governance/

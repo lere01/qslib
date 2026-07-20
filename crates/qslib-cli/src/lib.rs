@@ -761,10 +761,20 @@ fn human_value(value: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_path(prefix: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock must be after the Unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("{prefix}-{}-{nonce}", std::process::id()))
+    }
 
     #[test]
     fn ground_state_json_is_machine_readable_and_physically_labelled() {
-        let path = std::env::temp_dir().join(format!("qslib-cli-{}.yaml", std::process::id()));
+        let path = unique_temp_path("qslib-cli").with_extension("yaml");
         fs::write(
             &path,
             format!(
@@ -783,7 +793,11 @@ mod tests {
         let value: serde_json::Value = serde_json::from_str(&output).unwrap();
         assert_eq!(value["model"], "tfim");
         assert_eq!(value["site_count"], 1);
-        assert_eq!(value["energy"], -2.0);
+        let energy = value["energy"].as_f64().unwrap();
+        assert!(
+            (energy - (-2.0)).abs() <= 1.0e-12,
+            "one-site TFIM ground-state energy drifted: {energy}"
+        );
         assert!(value["residual"].as_f64().unwrap() < 1.0e-12);
         let negative_time = super::run(&[
             "exact".into(),
@@ -803,8 +817,7 @@ mod tests {
 
     #[test]
     fn invalid_model_reports_the_physical_field() {
-        let path =
-            std::env::temp_dir().join(format!("qslib-cli-invalid-{}.yaml", std::process::id()));
+        let path = unique_temp_path("qslib-cli-invalid").with_extension("yaml");
         fs::write(
             &path,
             format!(
@@ -846,9 +859,8 @@ mod tests {
         let value: serde_json::Value = serde_json::from_str(&conventions).unwrap();
         assert_eq!(value["site_order"], "row_major");
 
-        let directory =
-            std::env::temp_dir().join(format!("qslib-cli-artifact-{}", std::process::id()));
-        fs::create_dir_all(&directory).unwrap();
+        let directory = unique_temp_path("qslib-cli-artifact");
+        fs::create_dir(&directory).unwrap();
         fs::write(directory.join("COMPLETE"), b"complete\n").unwrap();
         let malformed = super::run(&[
             "artifacts".into(),
