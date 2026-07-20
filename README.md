@@ -60,7 +60,7 @@ For command-line configuration and physically labelled output, see the
 
 ## Project policies
 
-- [qslib 1.0 execution plan](docs/plans/qslib-v1.md)
+<!-- - [qslib 1.0 execution plan](docs/plans/qslib-v1.md) -->
 - [Scientific conventions](docs/conventions.md)
 - [Architecture](docs/architecture/README.md)
 - [Architectural decisions](docs/decisions/README.md)
