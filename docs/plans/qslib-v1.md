@@ -231,6 +231,9 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   public repository's latest update predates the local release commits. The
   prepared workflows therefore cannot be claimed as executed until the owner
   pushes the reviewed commits and observes the Linux/macOS/Windows runs.
+- [ ] (2026-07-20 11:03Z) Rechecked the public GitHub Actions API: the
+  repository still reports zero workflow runs. No local or external state has
+  changed, so the hosted matrix remains the only unresolved acceptance gate.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.
