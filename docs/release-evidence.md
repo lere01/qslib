@@ -31,42 +31,56 @@ implementation snapshot. It is not a publication or a release authorization.
   the CLI binary entry point and Python FFI remain unexercised by Rust tests,
   while core scientific branches have direct conformance or invalid-input
   coverage.
-- API stability: `cargo-semver-checks 0.42.0` compared the current facade with
-  baseline commit `2584261` as an assumed patch release and passed 165 checks
-  with 12 skips; the broader disposition is recorded in
+- API stability: `cargo semver-checks check-release -p qslib-quantum
+  --baseline-rev 2584261 --release-type patch --only-explicit-features`
+  (cargo-semver-checks 0.42.0) compared the current facade with baseline
+  commit `2584261` and passed 165 checks with 12 skips; the broader disposition
+  is recorded in
   [`docs/api-stability.md`](api-stability.md).
 - Packaging: the ABI3 wheel and Maturin source distribution both install in a
   temporary environment; each runs the ten Python contract tests and the exact
   four-site example. The current bundle is
-  `/private/tmp/qslib-release-candidate-20260720m`.
-  That local bundle predates the 10:20Z workflow and evidence edits; the
-  guarded release workflow is the reproducible path for rebuilding a bundle
-  from the current revision.
+  `/private/tmp/qslib-release-final-MmZAR0`, built from commit `e63466f`.
+  The guarded release workflow is the reproducible path for rebuilding a
+  bundle from the current revision.
 - Revalidation (2026-07-20 09:58Z): the full Rust 1.85 workspace test matrix,
   stable Clippy and rustdoc with warnings denied, formatting, all facade
   feature boundaries, conformance/workspace harnesses, Markdown links, and CI
   YAML parsing passed on the clean source revision used for the current bundle.
+- Hosted CI (2026-07-20): GitHub Actions run
+  [`29752717024`](https://github.com/lere01/qslib/actions/runs/29752717024) for
+  commit `e63466f` completed successfully. All 17 jobs passed, including the
+  Linux/macOS/Windows Rust stable and MSRV matrix, Python 3.12/3.13 wheels on
+  all three operating systems, Miri, branch coverage, bounded fuzzing, facade
+  feature checks, formatting, documentation, and dependency policy.
 - ncli parity (2026-07-20 10:20Z): the separately owned parent repository has
   an explicit optional qslib backend with TFIM, signed J1-J2, Rydberg, and exact
   spectrum parity tests. Its native backend remains the default. The adapter
   preflights a 256 MiB dense budget, rejects nonzero Rydberg diagonals and
-  non-Hermitian outputs, and the parent workflow installs qslib and marks the
-  parity tests required on all three hosted operating systems.
+  non-Hermitian outputs, and the parent workflow installs qslib at pinned
+  revision `e63466f` and marks the parity tests required on all three hosted
+  operating systems. Local execution against the current ABI3 wheel passed
+  all 11 parity tests with `NCLI_REQUIRE_QSLIB_PARITY=1`.
 - Publication preparation (2026-07-20 10:20Z): `.github/workflows/release.yml`
   defines a guarded artifact build and a manual, tag-checked GitHub release job.
   The build clean-installs and exercises wheel/sdist artifacts, smoke-tests the
   CLI, and verifies the generated checksum manifest before upload.
+- Release rehearsal (2026-07-20): the local workflow-equivalent build exposed
+  and corrected an invalid `--locked` flag on `maturin sdist`. Wheel and sdist
+  installs, ten Python contract tests, the exact ground-state example, CLI
+  help, mdBook, the combined Rust API site, and relocated checksum verification
+  all passed for commit `e63466f`.
 - Checksums: `SHA256SUMS` is generated from inside the bundle with `./...`
   relative paths and verifies both in place and after relocation.
 
 ## Known external gates
 
-The remote Linux/macOS/Windows CI matrix is authored but not executed in this
-local-only workflow. Its Rust jobs explicitly exclude the Python cdylib, which
-is built and tested through Maturin jobs on all three platforms. The local
-semver comparison above does not replace a
-Linux registry or release-baseline check. The ncli adapter remains a separate
-ownership unit and must be validated in its own repository's CI.
+The hosted qslib Linux/macOS/Windows matrix is green for commit `e63466f` as
+recorded above. Its Rust jobs explicitly exclude the Python cdylib, which is
+built and tested through Maturin jobs on all three platforms. The local semver
+comparison above does not replace a Linux registry or release-baseline check.
+The ncli adapter remains a separate ownership unit and must be validated in
+its own repository's CI.
 The Python cdylib is packaged through Maturin; a workspace-wide Cargo release
 link is not a supported way to build that extension on macOS.
 

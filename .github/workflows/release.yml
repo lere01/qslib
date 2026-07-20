@@ -56,7 +56,7 @@ jobs:
           git archive --format=tar.gz --prefix="qslib-$version/" HEAD > "dist/rust-source/qslib-$version-source.tar.gz"
           python3 -m pip install --disable-pip-version-check maturin pytest numpy
           RUSTUP_TOOLCHAIN=1.85.0 maturin build --locked --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
-          RUSTUP_TOOLCHAIN=1.85.0 maturin sdist --locked --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
+          RUSTUP_TOOLCHAIN=1.85.0 maturin sdist --manifest-path crates/qslib-python/Cargo.toml --out dist/wheels
           python3 -m venv "$RUNNER_TEMP/qslib-wheel-venv"
           "$RUNNER_TEMP/qslib-wheel-venv/bin/pip" install --disable-pip-version-check \
             dist/wheels/*.whl pytest numpy
