@@ -38,7 +38,7 @@ implementation snapshot. It is not a publication or a release authorization.
 - Packaging: the ABI3 wheel and Maturin source distribution both install in a
   temporary environment; each runs the ten Python contract tests and the exact
   four-site example. The current bundle is
-  `/private/tmp/qslib-release-candidate-20260720k`.
+  `/private/tmp/qslib-release-candidate-20260720l`.
 - Checksums: `SHA256SUMS` is generated from inside the bundle with `./...`
   relative paths and verifies both in place and after relocation.
 

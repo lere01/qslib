@@ -173,7 +173,7 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   combined Markdown/Rust API site, a portable workspace source archive plus the
   core Cargo package, license/readme/changelog/release-evidence files, and
   relative checksums are available under
-  `/private/tmp/qslib-release-candidate-20260720k`. It includes a Python sdist,
+  `/private/tmp/qslib-release-candidate-20260720l`. It includes a Python sdist,
   explicit `RELEASE_NOTES.md`, source revision/toolchain metadata, and a
   regenerated core Cargo package. Its checksum manifest uses `./...` relative
   paths, passes in place and after relocation, and covers the binary, wheel,
@@ -600,8 +600,8 @@ qslib-local CLI milestone is now complete: documented four-site and tiny SSE
 commands execute through public kernels, and JSON output is tested as a stable
 machine-facing surface. Local M15 hardening is complete with generated
 properties, bounded state-conversion fuzzing, Miri, audit, branch coverage, and
-the API freeze inventory. M16 remains a local candidate-refresh task, while
-remote cross-platform CI and ncli backend parity remain open gates.
+the API freeze inventory. Local M16 preparation is complete, while remote
+cross-platform CI and ncli backend parity remain open gates.
 
 ## Context and orientation
 
