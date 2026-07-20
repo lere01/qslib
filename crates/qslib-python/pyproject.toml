@@ -7,7 +7,25 @@ name = "qslib-quantum"
 version = "0.1.0"
 description = "Python bindings for the qslib quantum simulation library"
 requires-python = ">=3.12"
+readme = "PYTHON_README.md"
+license = { file = "LICENSE-APACHE" }
+authors = [{ name = "qslib contributors" }]
+keywords = ["quantum", "physics", "simulation", "lattice", "monte-carlo"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Physics",
+]
 dependencies = ["numpy>=2.0"]
+
+[project.urls]
+Repository = "https://github.com/lere01/qslib"
+Documentation = "https://lere01.github.io/qslib/"
+Source = "https://github.com/lere01/qslib"
 
 [tool.maturin]
 manifest-path = "Cargo.toml"

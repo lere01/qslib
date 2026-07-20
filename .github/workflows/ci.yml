@@ -61,6 +61,10 @@ jobs:
         run: cargo +stable test --locked -p qslib-test-support --test conventions --test workspace
       - name: Check Markdown links
         run: python3 tools/check_markdown_links.py
+      - name: Test third-party distribution contracts
+        run: |
+          PYTHONPATH=tools python3 tools/test_distribution_contract.py
+          PYTHONPATH=tools python3 tools/test_package_cli_release.py
       - name: Run bounded structured CLI fuzz smoke
         run: cargo +stable test --locked -p qslib-quantum-cli --lib structured_config_fuzz_never_panics_during_resolution
       - name: Install cargo-deny

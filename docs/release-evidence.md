@@ -43,6 +43,12 @@ implementation snapshot. It is not a publication or a release authorization.
   `/private/tmp/qslib-release-final-MmZAR0`, built from commit `61c5138`.
   The guarded release workflow is the reproducible path for rebuilding a
   bundle from the current revision.
+- Distribution preparation (2026-07-20): Python packaging metadata now carries
+  the physicist-facing description, Apache-2.0 license, repository and
+  documentation URLs, classifiers, and a crate-local README/license boundary
+  that works in both wheels and source distributions. The release workflow has
+  a guarded PyPI trusted-publishing job and builds Linux, macOS, and Windows
+  CLI archives with the same archive contract tests.
 - Revalidation (2026-07-20 09:58Z): the full Rust 1.85 workspace test matrix,
   stable Clippy and rustdoc with warnings denied, formatting, all facade
   feature boundaries, conformance/workspace harnesses, Markdown links, and CI

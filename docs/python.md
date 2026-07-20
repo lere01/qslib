@@ -44,6 +44,17 @@ python -m venv /tmp/qslib-venv
 /tmp/qslib-venv/bin/pytest crates/qslib-python/tests/python_contract.py
 ```
 
+For an authorized PyPI release, install the same binding with:
+
+```text
+python -m pip install qslib-quantum==1.0.0
+```
+
+The package name and import name are intentionally different: distribution
+`qslib-quantum` installs the `qslib_quantum` module. Pin the version for
+reproducible research and use the release checksum manifest when installing
+from a downloaded wheel instead of PyPI.
+
 The wheel is ABI-compatible with Python 3.12 and later on the platform where
 it is built. Publishing, signing, and registry uploads remain owner-gated.
 

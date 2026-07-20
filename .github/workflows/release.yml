@@ -11,6 +11,11 @@ on:
         required: true
         default: false
         type: boolean
+      publish_pypi:
+        description: Publish Python wheel and source distributions to PyPI
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -49,6 +54,8 @@ jobs:
           rm -rf dist
           cargo +stable package --locked -p qslib-quantum-core
           mkdir -p dist/bin dist/rust-source dist/wheels dist/docs
+          python3 tools/test_distribution_contract.py
+          python3 tools/test_package_cli_release.py
           cargo +stable test --locked --workspace --exclude qslib-quantum-python --all-targets --all-features
           cargo +stable build --locked --release -p qslib-quantum-cli
           cp target/release/qslib dist/bin/qslib
@@ -84,9 +91,52 @@ jobs:
           path: dist
           if-no-files-found: error
 
+  cli-binaries:
+    name: CLI archive (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x86_64
+            binary: target/release/qslib
+          - os: macos-latest
+            platform: macos
+            binary: target/release/qslib
+          - os: windows-latest
+            platform: windows-x86_64
+            binary: target/release/qslib.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install stable Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Build optimized CLI
+        run: cargo +stable build --locked --release -p qslib-quantum-cli
+      - name: Package CLI archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(cargo +stable metadata --locked --no-deps --format-version 1 | python3 -c 'import json, sys; packages=json.load(sys.stdin)["packages"]; print(next(p["version"] for p in packages if p["name"] == "qslib-quantum"))')"
+          python3 tools/package_cli_release.py \
+            --binary "${{ matrix.binary }}" \
+            --version "$version" \
+            --platform "${{ matrix.platform }}" \
+            --output dist/cli
+      - name: Upload CLI archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: qslib-cli-${{ matrix.platform }}-${{ github.run_id }}
+          path: dist/cli/*
+          if-no-files-found: error
+
   publish:
     name: Create GitHub release (manual)
-    needs: prepare
+    needs: [prepare, cli-binaries]
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     permissions:
@@ -102,7 +152,35 @@ jobs:
         with:
           name: qslib-release-${{ github.run_id }}
           path: dist
+      - name: Download reviewed CLI archives
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: qslib-cli-*-${{ github.run_id }}
+          path: dist/cli
+          merge-multiple: true
       - name: Create GitHub release from the checked-out tag
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/qslib-*-artifacts.tar.gz dist/SHA256SUMS dist/BUILD_METADATA.txt --verify-tag --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/qslib-*-artifacts.tar.gz dist/SHA256SUMS dist/BUILD_METADATA.txt dist/cli/* --verify-tag --generate-notes
+
+  publish-pypi:
+    name: Publish Python distributions (manual)
+    needs: prepare
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_pypi && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/qslib-quantum
+    permissions:
+      id-token: write
+    steps:
+      - name: Download reviewed release candidate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: qslib-release-${{ github.run_id }}
+          path: dist
+      - name: Publish Python distributions with trusted publishing
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # release/v1
+        with:
+          packages-dir: dist/wheels/
+          skip-existing: true

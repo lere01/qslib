@@ -58,6 +58,16 @@ projection, see the [symmetry guide](docs/symmetry.md).
 For command-line configuration and physically labelled output, see the
 [CLI guide](docs/cli.md).
 
+## Third-party installation
+
+The distribution contract is prepared under the collision-safe name
+`qslib-quantum`. Once an owner-authorized release is published, Rust users will
+install it with `cargo add qslib-quantum --features exact`, Python users with
+`python -m pip install qslib-quantum`, and command-line users will download the
+platform archive containing `qslib`. Rust imports remain `qslib`, and Python
+imports remain `qslib_quantum`. See the [installation guide](docs/installation.md)
+for version pinning, checksums, and the prepublication Git dependency path.
+
 ## Project policies
 
 - [Scientific conventions](docs/conventions.md)
