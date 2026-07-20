@@ -40,7 +40,7 @@ implementation snapshot. It is not a publication or a release authorization.
 - Packaging: the ABI3 wheel and Maturin source distribution both install in a
   temporary environment; each runs the ten Python contract tests and the exact
   four-site example. The current bundle is
-  `/private/tmp/qslib-release-final-MmZAR0`, built from commit `e63466f`.
+  `/private/tmp/qslib-release-final-MmZAR0`, built from commit `61c5138`.
   The guarded release workflow is the reproducible path for rebuilding a
   bundle from the current revision.
 - Revalidation (2026-07-20 09:58Z): the full Rust 1.85 workspace test matrix,
@@ -69,7 +69,7 @@ implementation snapshot. It is not a publication or a release authorization.
   and corrected an invalid `--locked` flag on `maturin sdist`. Wheel and sdist
   installs, ten Python contract tests, the exact ground-state example, CLI
   help, mdBook, the combined Rust API site, and relocated checksum verification
-  all passed for commit `e63466f`.
+  all passed for commit `61c5138`.
 - Checksums: `SHA256SUMS` is generated from inside the bundle with `./...`
   relative paths and verifies both in place and after relocation.
 
