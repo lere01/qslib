@@ -223,6 +223,9 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   verifies SHA256SUMS before upload. Parent ncli CI now builds the qslib wheel
   and runs parity as a required non-skipping matrix on Linux, macOS, and
   Windows. Hosted execution remains the only external observation gate.
+- [x] (2026-07-20 10:55Z) Pinned the parent parity workflow to reviewed qslib
+  revision `7d984c398182ced8ed3d0414c3a14a6c8417e7db` and made Rydberg
+  diagonal rejection exact, including a sub-tolerance nonzero regression case.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.
