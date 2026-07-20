@@ -14,9 +14,9 @@ conventions from an earlier program.
 The current dependency direction and subsystem boundaries are documented in
 the [architecture overview](docs/architecture/README.md). Consequential design
 choices are recorded as [architectural decision records](docs/decisions/README.md).
-The living [qslib 1.0 execution plan](docs/plans/qslib-v1.md), governed by
-[`PLANS.md`](PLANS.md), defines the implementation milestones and completion
-criteria for autonomous development.
+The qslib 1.0 release criteria are recorded in the project's internal
+execution plan; the public documentation describes the supported behavior and
+quality guarantees.
 The [documentation index](docs/index.md) collects the physicist-first guides
 and the locally generated Rust API reference entry point.
 
@@ -60,14 +60,12 @@ For command-line configuration and physically labelled output, see the
 
 ## Project policies
 
-<!-- - [qslib 1.0 execution plan](docs/plans/qslib-v1.md) -->
 - [Scientific conventions](docs/conventions.md)
 - [Architecture](docs/architecture/README.md)
 - [Architectural decisions](docs/decisions/README.md)
 - [Rust toolchain and MSRV](docs/toolchain-policy.md)
-<!-- - [Contributing](CONTRIBUTING.md)
-- [Code-of-conduct decision](docs/governance/code-of-conduct-decision.md)
-- [Security](SECURITY.md) -->
+- [Contribution policy](docs/contribution-policy.md)
+- [Security policy](docs/security-policy.md)
 - [Changelog](CHANGELOG.md)
 - [Local release notes](RELEASE_NOTES.md)
 - [Apache-2.0 license](LICENSE)
@@ -79,4 +77,4 @@ collision-safe `qslib_quantum`. Naming does not authorize publication. See
 [ADR-0009](docs/decisions/0009-registry-package-names.md).
 
 The project does not currently accept unsolicited external contributions. See
-the [contribution policy](CONTRIBUTING.md) before proposing changes.
+the [contribution policy](docs/contribution-policy.md) for the current status.

@@ -24,4 +24,3 @@
 - [Architecture](architecture/README.md)
 - [Architecture decisions](decisions/README.md)
 - [Toolchain policy](toolchain-policy.md)
-- [qslib 1.0 plan](plans/qslib-v1.md)

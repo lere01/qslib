@@ -49,10 +49,9 @@ the source tree.
 
 - [Architecture overview](architecture/README.md)
 - [Architecture decisions](decisions/README.md)
-- [qslib 1.0 execution plan](plans/qslib-v1.md)
 - [Toolchain policy](toolchain-policy.md)
-- [Security policy](../SECURITY.md)
-- [Contribution policy](../CONTRIBUTING.md)
+- [Security policy](security-policy.md)
+- [Contribution policy](contribution-policy.md)
 
 All worked examples in the CLI guide are executed by integration tests. The
 Python wheel and its contract tests are built separately because Python is an

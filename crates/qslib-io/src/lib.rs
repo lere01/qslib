@@ -2000,7 +2000,7 @@ impl ColumnarTrajectory {
                 .map_err(|error| IoError::InvalidData(error.to_string()))?;
             fs::File::open(&temporary)?.sync_all()?;
             fs::rename(&temporary, path)?;
-            fs::File::open(parent)?.sync_all()?;
+            sync_directory(parent)?;
             Ok::<(), IoError>(())
         })();
         if result.is_err() {
@@ -2392,13 +2392,29 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), IoError> {
         file.write_all(bytes)?;
         file.sync_all()?;
         fs::rename(&temporary, path)?;
-        fs::File::open(parent)?.sync_all()?;
+        sync_directory(parent)?;
         Ok::<(), IoError>(())
     })();
     if result.is_err() {
         let _ = fs::remove_file(&temporary);
     }
     result
+}
+
+/// Flush a directory entry after an atomic rename where the platform exposes
+/// a portable directory handle. Windows does not permit opening a directory
+/// as a synchronizable `File`, while the rename itself still provides the
+/// supported replacement boundary there.
+fn sync_directory(path: &Path) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        fs::File::open(path)?.sync_all()
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        Ok(())
+    }
 }
 
 /// Atomically publish a checkpoint envelope and its named NPY arrays.
@@ -2496,9 +2512,9 @@ pub fn write_checkpoint_bundle(
             &temporary.join("checkpoint.json"),
             checkpoint.to_json()?.as_bytes(),
         )?;
-        fs::File::open(&temporary)?.sync_all()?;
+        sync_directory(&temporary)?;
         fs::rename(&temporary, directory)?;
-        fs::File::open(parent)?.sync_all()?;
+        sync_directory(parent)?;
         Ok::<(), IoError>(())
     })();
     if result.is_err() {

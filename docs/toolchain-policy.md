@@ -19,6 +19,7 @@ The lockfile is committed for reproducible workspace, CLI, Python, and release
 candidate validation. Library dependency requirements remain semver ranges, but
 CI validates the locked graph and a fresh dependency resolution separately.
 
-The standard checks are listed in `AGENTS.md` and `CONTRIBUTING.md`. Nightly
-Rust may be used by optional analysis tools such as fuzzers, but supported
-library code and release artifacts must not require nightly features.
+The standard checks are listed in the repository workflow and the
+[contribution policy](contribution-policy.md). Nightly Rust may be used by
+optional analysis tools such as fuzzers, but supported library code and release
+artifacts must not require nightly features.
