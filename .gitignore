@@ -45,3 +45,4 @@ CONTRIBUTING.md
 __pycache__/
 *.pyc
 CHANGELOG.md
+RELEASE_NOTES.md
