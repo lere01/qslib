@@ -1,0 +1,4 @@
+interface:
+  display_name: "qslib Physics Documentation"
+  short_description: "Write physicist-first qslib documentation"
+  default_prompt: "Use $qslib-write-physics-docs to document this qslib API for physicists."

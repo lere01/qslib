@@ -1,0 +1,4 @@
+interface:
+  display_name: "qslib Conformance Check"
+  short_description: "Design test-first qslib conformance checks"
+  default_prompt: "Use $qslib-check-conformance to write failing conformance tests and verify this implementation."

@@ -1,0 +1,20 @@
+[package]
+name = "qslib-quantum"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "Apache-2.0"
+description = "Reusable quantum simulation models, solvers, and scientific conventions"
+readme = "README.md"
+repository = "https://github.com/lere01/qslib.git"
+homepage = "https://github.com/lere01/qslib"
+documentation = "https://docs.rs/qslib-quantum"
+publish = false
+keywords = ["quantum", "physics", "simulation", "lattice", "monte-carlo"]
+categories = ["science", "simulation"]
+
+[lib]
+name = "qslib"
+path = "src/lib.rs"
+
+[dependencies]
