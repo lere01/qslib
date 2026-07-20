@@ -173,9 +173,12 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   Markdown/Rust API site, a portable workspace source archive plus the core
   Cargo package, license/readme/changelog/release-evidence files, and relative
   checksums are available under
-  `/private/tmp/qslib-release-candidate-20260720d`. Its relative checksum
-  manifest covers the binary, wheel, combined documentation, source archives,
-  metadata, and captured exact/SSE JSON smoke outputs. Clean CLI smoke runs
+  `/private/tmp/qslib-release-candidate-20260720f`. It includes a Python sdist,
+  explicit `RELEASE_NOTES.md`, source revision/toolchain metadata, and a
+  regenerated core Cargo package. Its checksum manifest uses `./...` relative
+  paths, passes in place and after relocation, and covers the binary, wheel,
+  sdist, combined documentation, source archives, metadata, release notes, and
+  captured exact/SSE JSON smoke outputs. Clean wheel, sdist, and CLI smoke runs
   pass. This is a 0.1.0 candidate; version 1.0.0 remains prohibited until
   every acceptance gate passes.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
@@ -353,6 +356,14 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   remains disabled.
   Evidence: `cargo package --workspace --no-verify` packages core then fails
   resolving the unpublished core dependency for the exact crate.
+- Observation: checksum manifests must be generated from inside the candidate
+  directory. Evidence: the previous local bundle embedded absolute temporary
+  paths; candidate `20260720f` now records `./...` paths and verifies unchanged
+  after copying to a different directory.
+- Observation: a Python sdist is independently installable when its build
+  backend is available locally. Evidence: Maturin built the sdist, and a clean
+  temporary environment installed it with `--no-build-isolation`, ran all ten
+  Python contract tests, and reproduced the exact ground-state example.
 - Observation: CLI artifact inspection must use the same transactional loader
   as scientific consumers. A filename named `COMPLETE` is not evidence of a
   complete dataset; marker bytes, manifest schema, configuration checksum, and

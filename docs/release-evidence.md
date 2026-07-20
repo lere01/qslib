@@ -35,6 +35,12 @@ implementation snapshot. It is not a publication or a release authorization.
   baseline commit `2584261` as an assumed patch release and passed 165 checks
   with 12 skips; the broader disposition is recorded in
   [`docs/api-stability.md`](api-stability.md).
+- Packaging: the ABI3 wheel and Maturin source distribution both install in a
+  temporary environment; each runs the ten Python contract tests and the exact
+  four-site example. The current bundle is
+  `/private/tmp/qslib-release-candidate-20260720f`.
+- Checksums: `SHA256SUMS` is generated from inside the bundle with `./...`
+  relative paths and verifies both in place and after relocation.
 
 ## Known external gates
 
