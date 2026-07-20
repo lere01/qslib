@@ -226,6 +226,11 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
 - [x] (2026-07-20 10:55Z) Pinned the parent parity workflow to reviewed qslib
   revision `7d984c398182ced8ed3d0414c3a14a6c8417e7db` and made Rydberg
   diagonal rejection exact, including a sub-tolerance nonzero regression case.
+- [ ] External hosted gate remains owner-controlled: a read-only GitHub API
+  audit on 2026-07-20 found zero workflow runs for `lere01/qslib`, and the
+  public repository's latest update predates the local release commits. The
+  prepared workflows therefore cannot be claimed as executed until the owner
+  pushes the reviewed commits and observes the Linux/macOS/Windows runs.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.
