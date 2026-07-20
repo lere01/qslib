@@ -194,8 +194,9 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   harnesses, Markdown links, and CI YAML parsing. The local candidate was
   rebuilt as `/private/tmp/qslib-release-candidate-20260720m`; its exact and
   SSE JSON outputs parse, and its relative checksum manifest verifies in place
-  and after relocation. Hosted cross-platform CI and ncli parity remain owner
-  gates.
+  and after relocation. Hosted cross-platform CI remained the external gate at
+  that point; ncli parity was completed in the separately owned parent repo at
+  10:20Z.
 - [x] (2026-07-20 10:20Z) Added the guarded publication-preparation workflow
   at `.github/workflows/release.yml`. It checks out full Git history, verifies
   tag/version agreement, reruns the locked workspace suite, builds the CLI,
