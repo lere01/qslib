@@ -1392,7 +1392,7 @@ At every stopping point, update `Progress`, `Surprises and discoveries`, and the
 
 ## External authority and owner gates
 
-### Current gate status, updated 2026-07-20 06:18Z
+### Current gate status, updated 2026-07-20 11:04Z
 
 Second resume record: on 2026-07-19 the owner resolved every reduced Milestone 0
 gate. Toolchain and dependency downloads plus local commits are authorized.
@@ -1416,8 +1416,10 @@ remain prohibited.
 - Remote cross-platform CI execution will require later branch/push authority
   or another owner-approved runner. Workflows can be authored and validated
   locally before that gate.
-- Milestone 12 changes to the separate ncli ownership unit require later
-  coordinated authority now that qslib is a dedicated repository.
+- Milestone 12 changes to the separate ncli ownership unit were implemented
+  locally with coordinated parity tests and a pinned parent workflow. The
+  parent worktree remains uncommitted because it contains unrelated user
+  changes; no parent commit or remote mutation was performed.
 - Local semver evidence is available: `cargo-semver-checks 0.42.0` compared
   `HEAD` with baseline commit `2584261` as an assumed patch release and passed
   165 checks with 12 skips. This is an intra-repository API review, not a
@@ -1433,8 +1435,10 @@ remain prohibited.
   release evidence; interface entry points and Python FFI are not exercised by
   Rust tests.
 - The local qslib M15 gates are therefore complete. The remaining M15 gate is
-  execution of the authored cross-platform CI matrix, which requires an
-  owner-approved remote runner or publication/push authority.
+  execution of the authored cross-platform CI matrix. A read-only GitHub API
+  audit at 11:03Z found zero workflow runs and a remote revision older than the
+  local release commits, so execution requires an owner-approved remote runner
+  or publication/push authority.
 
 Before the autonomous implementation goal begins, the owner should decide or
 authorize these items:
