@@ -40,8 +40,8 @@ implementation snapshot. It is not a publication or a release authorization.
 - Packaging: the ABI3 wheel and Maturin source distribution both install in a
   temporary environment; each runs the ten Python contract tests and the exact
   four-site example. The current bundle is
-  `/private/tmp/qslib-release-final-20260720-123232`, built from commit
-  `8e451da`.
+  `/private/tmp/qslib-release-final-20260720-124823`, built from the final
+  local distribution-preparation revision.
   The guarded release workflow is the reproducible path for rebuilding a
   bundle from the current revision.
 - Distribution preparation (2026-07-20): Python packaging metadata now carries
