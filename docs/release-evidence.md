@@ -15,19 +15,33 @@ implementation snapshot. It is not a publication or a release authorization.
 - Policy: cargo-deny advisories, licenses, and sources.
 - Hardening: bounded structured CLI parser/resolution fuzz smoke and expanded
   kernel benchmark target.
-- Coverage: `cargo llvm-cov --locked --workspace --all-features --summary-only`
-  passed with 78.28% line coverage and 71.63% region coverage. The tool emitted
-  no branch counters for this run; Python FFI and the CLI binary entry point
-  were not exercised by this Rust-only coverage command.
+- Generated invariants: bounded packed-state byte/word round trips and
+  permutation inverse/compose properties pass on Rust 1.85 and under Miri.
+- Fuzzing: the isolated `fuzz/state_conversion` libFuzzer target passes
+  `cargo fuzz run state_conversion --sanitizer none -- -runs=1000` with no
+  crash; CI has the same bounded invocation.
+- Safety: nightly Rust 1.99.0 Miri passes every qslib-core target, including
+  the generated conversion tests.
+- Dependency audit: `cargo audit` exits zero with one allowed unmaintained
+  `paste 1.0.15` warning in the Parquet dependency tree; cargo-deny reports
+  the same documented exception.
+- Coverage: nightly `cargo llvm-cov --locked --workspace --all-features
+  --branch --summary-only` passed with 77.99% line coverage, 77.66% region
+  coverage, and 57.76% branch coverage. The file-level report was reviewed;
+  the CLI binary entry point and Python FFI remain unexercised by Rust tests,
+  while core scientific branches have direct conformance or invalid-input
+  coverage.
 - API stability: `cargo-semver-checks 0.42.0` compared the current facade with
   baseline commit `2584261` as an assumed patch release and passed 165 checks
-  with 12 skips.
+  with 12 skips; the broader disposition is recorded in
+  [`docs/api-stability.md`](api-stability.md).
 
 ## Known external gates
 
-The remote Linux/macOS/Windows CI matrix and nightly Miri execution are authored
-but not executed in this local-only workflow. The local semver comparison above
-does not replace a Linux registry or release-baseline check.
+The remote Linux/macOS/Windows CI matrix is authored but not executed in this
+local-only workflow. The local semver comparison above does not replace a
+Linux registry or release-baseline check. The ncli backend-selection/parity
+adapter remains a separate ownership unit.
 The ncli backend-selection/parity adapter remains a separate ownership unit.
 The Python cdylib is packaged through Maturin; a workspace-wide Cargo release
 link is not a supported way to build that extension on macOS.

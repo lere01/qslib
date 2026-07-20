@@ -2,6 +2,7 @@
 
 - [Introduction](index.md)
 - [Installation](installation.md)
+- [API stability review](api-stability.md)
 - [Scientific conventions](conventions.md)
 - [Geometry and interactions](geometry-interactions.md)
 - [Operators and models](operators-models.md)

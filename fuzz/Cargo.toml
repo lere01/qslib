@@ -1,0 +1,21 @@
+[package]
+name = "qslib-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+qslib_core = { package = "qslib-quantum-core", path = "../crates/qslib-core" }
+
+[[bin]]
+name = "state_conversion"
+path = "fuzz_targets/state_conversion.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]

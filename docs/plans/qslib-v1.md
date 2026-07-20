@@ -131,7 +131,7 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   legacy migration errors, and an independent Python artifact verifier. Rust
   1.85/stable workspace tests, Clippy, rustdoc, cargo-deny, and focused IO,
   checkpoint-resume, and Python-reader gates pass.
-- [ ] Local qslib portion of M12 complete (2026-07-20 00:29Z): the ABI3
+- [x] (2026-07-20 06:18Z) Completed the qslib-local portion of M12: the ABI3
   PyO3/NumPy binding has structured exceptions, Maturin metadata, owned-array
   contracts, row-major geometry and coupling resolution, exact basis and
   TFIM ground-state/matrix bindings, Heisenberg/Rydberg matrix bindings,
@@ -155,15 +155,20 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   CI, a doctested CLI Rust example, corrected CLI mathematics, and a guarded
   documentation-site output path. Architect closure review approved local
   closure after the relative API-link and generated-site checks passed.
-- [ ] In progress (2026-07-20 02:05Z): M15 hardening now benchmarks geometry,
-  interaction resolution, matrix construction/action, exact diagonalization,
-  expectation, TDVP statistics/solve, and short SSE sweeps, with a recorded
-  same-host baseline. Structured parser/resolution fuzz smoke coverage and a
-  bounded CI invocation are authored. A local previous-commit semver check now
-  passes all 165 applicable checks, and workspace llvm-cov reports 78.28% line
-  coverage (71.63% regions; branch data is unavailable from this tool output).
-  The remote CI matrix and nightly Miri execution remain external gates.
-- [ ] Local M16 release-candidate preparation (2026-07-20 02:12Z): optimized
+- [x] (2026-07-20 06:18Z) Completed local M15 hardening: generated packed-state
+  and permutation property tests cover bounded deterministic cases, a
+  libFuzzer state-conversion target passes 1,000 executions, nightly Miri
+  passes all qslib-core targets, and cargo audit reports only the documented
+  allowed unmaintained `paste` warning. Branch-enabled workspace coverage
+  reports 77.99% lines, 77.66% regions, and 57.76% branches; uncovered paths
+  were reviewed as interface entry points, error/fallback branches, or
+  platform-specific Python code. The API stability inventory is recorded in
+  `docs/api-stability.md`, and the deprecated SSE RNG suppression was removed.
+- [ ] In progress (2026-07-20 06:18Z): the remaining M15 hardening gate is
+  execution of the authored Linux/macOS/Windows CI matrix; local benchmarks,
+  generated tests, fuzzing, Miri, dependency audit, semver, and coverage
+  evidence are complete.
+- [ ] Local M16 release-candidate preparation (2026-07-20 06:18Z): optimized
   Rust binaries excluding the Python cdylib, an ABI3 Python wheel, a combined
   Markdown/Rust API site, a portable workspace source archive plus the core
   Cargo package, license/readme/changelog/release-evidence files, and relative
@@ -306,8 +311,30 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   comparison is not a registry publication check.
 - Observation: the local Rust 1.85 toolchain does not ship the Miri component.
   Evidence: `cargo miri --version` reports that `cargo-miri` is unavailable;
-  the repository now authors a nightly Ubuntu Miri job for the core tests so
-  the required safety gate can run on a supported host.
+  nightly 1.99.0 with Miri was installed for the authorized local check, and
+  all qslib-core targets passed. The repository also authors a nightly Ubuntu
+  Miri job for reproducible CI execution.
+- Observation: branch coverage is an unstable nightly-only cargo-llvm-cov
+  feature. Evidence: the stable invocation rejects `-Z coverage-options=branch`;
+  nightly coverage passed the complete workspace and reported 57.76% branch,
+  77.99% line, and 77.66% region coverage. The zero-coverage CLI binary entry
+  point and Python FFI are interface-boundary paths not exercised by Rust unit
+  tests; core scientific branches were reviewed in the file-level report.
+- Observation: the first broad generated state-conversion tests were too slow
+  under Miri. Evidence: the run was interrupted inside a packed-state parser;
+  the tests now retain full host bounds and use smaller deterministic bounds
+  only under `cfg(miri)`, after which every core Miri target passed.
+- Observation: `cargo audit` now runs with a refreshed advisory database and
+  exits successfully with one allowed unmaintained `paste 1.0.15` warning in
+  the Parquet dependency tree, matching the documented cargo-deny exception.
+- Observation: a real state-conversion fuzz target needs an isolated Cargo
+  workspace so libFuzzer dependencies cannot enter qslib's production graph.
+  Evidence: `fuzz/` is excluded from the main workspace, its target passed
+  1,000 local executions, and CI has a bounded `cargo fuzz run` job.
+- Observation: the pre-1.0 API freeze needed a durable stability disposition,
+  not only a semver number. Evidence: `docs/api-stability.md` inventories the
+  facade, capability crates, CLI, Python, legacy adapter, and test support
+  surfaces and records their compatibility rules.
 - Observation: compact CLI model input cannot reuse qslib-io's
   `qslib-config-v1` identifier because that schema already names a complete
   `ScientificConfig` document. The two documents have different fields and
@@ -560,11 +587,10 @@ executes, and ncli backend adoption remains a separate ownership boundary
 that must not modify the parent repository without explicit authority. The
 qslib-local CLI milestone is now complete: documented four-site and tiny SSE
 commands execute through public kernels, and JSON output is tested as a stable
-machine-facing surface. M15 hardening and M16 local artifact preparation are
-in progress. The local release candidate has a reproducible checksum manifest
-and clean-environment smoke evidence; local semver and coverage evidence are
-now recorded, while cross-platform CI, Miri execution, and ncli backend parity
-remain open gates.
+machine-facing surface. Local M15 hardening is complete with generated
+properties, bounded state-conversion fuzzing, Miri, audit, branch coverage, and
+the API freeze inventory. M16 remains a local candidate-refresh task, while
+remote cross-platform CI and ncli backend parity remain open gates.
 
 ## Context and orientation
 
@@ -1298,11 +1324,11 @@ At every stopping point, update `Progress`, `Surprises and discoveries`, and the
 
 ## External authority and owner gates
 
-### Current gate status, updated 2026-07-20 02:05Z
+### Current gate status, updated 2026-07-20 06:18Z
 
 Second resume record: on 2026-07-19 the owner resolved every reduced Milestone 0
 gate. Toolchain and dependency downloads plus local commits are authorized.
-Remote push, pull, publication, signing, deployment, and destructive migration
+Remote repository contact, push, pull, publication, signing, deployment, and destructive migration
 remain prohibited.
 
 - Dedicated repository ownership is accepted and implemented. The repository
@@ -1328,11 +1354,19 @@ remain prohibited.
   `HEAD` with baseline commit `2584261` as an assumed patch release and passed
   165 checks with 12 skips. This is an intra-repository API review, not a
   registry release check.
-- Local workspace coverage evidence is available from
-  `cargo llvm-cov --locked --workspace --all-features --summary-only`: 78.28%
-  line coverage, 71.63% region coverage, and no branch counters emitted by the
-  installed tool. The report identified the CLI entry point and Python FFI as
-  expected uninstrumented paths in this Rust-only run.
+- Local hardening evidence is available: generated basis/permutation tests pass;
+  `cargo fuzz run state_conversion --sanitizer none -- -runs=1000` passes;
+  nightly Miri passes all qslib-core targets; and `cargo audit` exits zero with
+  the documented allowed `paste` warning.
+- Nightly branch coverage from
+  `cargo +nightly llvm-cov --locked --workspace --all-features --branch
+  --summary-only` reports 77.99% lines, 77.66% regions, and 57.76% branches.
+  The uncovered file-level paths were reviewed and are recorded in the
+  release evidence; interface entry points and Python FFI are not exercised by
+  Rust tests.
+- The local qslib M15 gates are therefore complete. The remaining M15 gate is
+  execution of the authored cross-platform CI matrix, which requires an
+  owner-approved remote runner or publication/push authority.
 
 Before the autonomous implementation goal begins, the owner should decide or
 authorize these items:

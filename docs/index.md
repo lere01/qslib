@@ -11,6 +11,8 @@ through Rust, the command line, and Python.
 - [CLI guide](cli.md) - run the four-site exact and tiny SSE examples.
 - [Installation](installation.md) - install the command, Rust library, and
   optional Python wheel.
+- [API stability review](api-stability.md) - understand the candidate 1.0
+  public surface and compatibility rules.
 - [Python guide](python.md) - use the `qslib_quantum` NumPy binding.
 - [Geometry and interactions](geometry-interactions.md) - pair-dependent and
   disordered couplings.

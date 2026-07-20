@@ -3,6 +3,8 @@ use qslib_core::{
     PauliString, Permutation, RectangularGeometry, SimulationBasis, SiteCount, SiteId,
     SpinInversion, SymmetryCharacter,
 };
+use rand_chacha::ChaCha8Rng;
+use rand_core::{Rng, SeedableRng};
 
 #[test]
 fn gather_permutations_compose_invert_and_act_on_bits() {
@@ -355,4 +357,52 @@ fn legacy_x_major_symmetry_adapter_is_explicit() {
         canonical,
         BasisState::from_raw_bits(&[0, 0, 1, 0, 0, 0]).unwrap()
     );
+}
+
+#[test]
+fn generated_permutations_preserve_inverse_and_composition() {
+    let mut rng = ChaCha8Rng::seed_from_u64(0x5359_4d4d_4554_0001);
+
+    let cases = if cfg!(miri) { 32 } else { 256 };
+    for _case in 0..cases {
+        let site_count: usize = 1 + (rng.next_u32() as usize % 64);
+        let sites = SiteCount::new(site_count).expect("generated site count");
+        let mut source_indices = (0..site_count).collect::<Vec<_>>();
+        for index in (1..site_count).rev() {
+            let swap = (rng.next_u32() as usize) % (index + 1);
+            source_indices.swap(index, swap);
+        }
+        let permutation = Permutation::new(
+            sites,
+            source_indices
+                .iter()
+                .copied()
+                .map(|index| SiteId::new(index as u32))
+                .collect(),
+        )
+        .expect("generated permutation");
+        let inverse = permutation.inverse().expect("generated inverse");
+        let identity = Permutation::identity(sites).expect("generated identity");
+
+        assert_eq!(
+            permutation.compose(&inverse).expect("right identity"),
+            identity
+        );
+        assert_eq!(
+            inverse.compose(&permutation).expect("left identity"),
+            identity
+        );
+
+        let state = BasisState::from_raw_bits(
+            &(0..site_count)
+                .map(|_| (rng.next_u32() & 1) as u8)
+                .collect::<Vec<_>>(),
+        )
+        .expect("generated state");
+        let transformed = permutation.apply_state(&state).expect("action");
+        assert_eq!(
+            inverse.apply_state(&transformed).expect("inverse action"),
+            state
+        );
+    }
 }

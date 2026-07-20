@@ -69,6 +69,7 @@ For command-line configuration and physically labelled output, see the
 - [Code-of-conduct decision](docs/governance/code-of-conduct-decision.md)
 - [Security](SECURITY.md)
 - [Changelog](CHANGELOG.md)
+- [Local release notes](RELEASE_NOTES.md)
 - [Apache-2.0 license](LICENSE)
 
 External publication is disabled. The `qslib` crates.io and PyPI distribution

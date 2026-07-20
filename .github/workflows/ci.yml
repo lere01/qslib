@@ -133,6 +133,36 @@ jobs:
       - name: Audit workspace graph and feature metadata
         run: cargo +stable test --locked -p qslib-test-support --test workspace
 
+  fuzz-state-conversion:
+    name: Bounded state-conversion fuzz
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Install stable Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Install cargo-fuzz
+        run: cargo +stable install cargo-fuzz --version 0.13.2 --locked
+      - name: Run bounded state-conversion fuzz target
+        run: cargo fuzz run state_conversion --sanitizer none -- -runs=1000
+
+  coverage:
+    name: Branch coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Install nightly coverage toolchain
+        run: rustup toolchain install nightly --profile minimal --component llvm-tools-preview rust-src
+      - name: Install cargo-llvm-cov
+        run: cargo +stable install cargo-llvm-cov --version 0.6.21 --locked
+      - name: Run branch-enabled workspace coverage
+        run: cargo +nightly llvm-cov --locked --workspace --all-features --branch --summary-only
+
   miri-core:
     name: Miri core safety checks
     runs-on: ubuntu-latest

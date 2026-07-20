@@ -2,6 +2,8 @@ use qslib_core::{
     BasisBit, BasisError, BasisState, FullBasis, PhysicalAxis, SectorBasis, SimulationBasis,
     SiteCount, SiteId, WordWidth,
 };
+use rand_chacha::ChaCha8Rng;
+use rand_core::{Rng, SeedableRng};
 use std::str::FromStr;
 
 #[test]
@@ -149,4 +151,73 @@ fn packed_state_rejects_noncanonical_high_bits_and_wrong_serialized_width() {
         qslib_core::PackedState::from_bytes(9, WordWidth::U8, &[0, 2]),
         Err(BasisError::NonCanonicalHighBits { .. })
     ));
+}
+
+#[test]
+fn generated_packed_state_properties_are_bounded_and_reproducible() {
+    let mut rng = ChaCha8Rng::seed_from_u64(0x5153_5441_5445_0001);
+    let widths = [
+        WordWidth::U8,
+        WordWidth::U16,
+        WordWidth::U32,
+        WordWidth::U64,
+    ];
+
+    let cases = if cfg!(miri) { 16 } else { 512 };
+    for _case in 0..cases {
+        let site_count: usize = 1 + (rng.next_u32() as usize % 257);
+        let raw_bits = (0..site_count)
+            .map(|_| (rng.next_u32() & 1) as u8)
+            .collect::<Vec<_>>();
+        let dense = BasisState::from_raw_bits(&raw_bits).expect("generated binary state");
+        let packed = dense.pack().expect("generated packed state");
+
+        assert_eq!(packed.site_count(), site_count);
+        assert_eq!(packed.hamming_weight(), dense.hamming_weight());
+        for (site, expected) in raw_bits.iter().copied().enumerate() {
+            assert_eq!(packed.bit(site).expect("generated site").as_u8(), expected);
+        }
+
+        for width in widths {
+            let bytes = packed.to_bytes(width).expect("generated serialization");
+            let restored = qslib_core::PackedState::from_bytes(site_count, width, &bytes)
+                .expect("generated deserialization");
+            assert_eq!(restored, packed);
+            assert_eq!(
+                restored.to_bytes(width).expect("stable serialization"),
+                bytes
+            );
+        }
+    }
+}
+
+#[test]
+fn bounded_state_conversion_fuzz_inputs_never_panic() {
+    let mut rng = ChaCha8Rng::seed_from_u64(0x5153_5441_5445_0002);
+    let widths = [
+        WordWidth::U8,
+        WordWidth::U16,
+        WordWidth::U32,
+        WordWidth::U64,
+    ];
+
+    let cases = if cfg!(miri) { 8 } else { 1_024 };
+    for _case in 0..cases {
+        let site_count: usize = 1 + (rng.next_u32() as usize % 257);
+        for width in widths {
+            let serialized_words = site_count.div_ceil(width.bits());
+            let byte_count = serialized_words * width.bytes();
+            let mut bytes = vec![0_u8; byte_count];
+            for byte in &mut bytes {
+                *byte = rng.next_u32() as u8;
+            }
+
+            if let Ok(state) = qslib_core::PackedState::from_bytes(site_count, width, &bytes) {
+                let canonical = state.to_bytes(width).expect("accepted state serializes");
+                let restored = qslib_core::PackedState::from_bytes(site_count, width, &canonical)
+                    .expect("canonical state deserializes");
+                assert_eq!(restored, state);
+            }
+        }
+    }
 }

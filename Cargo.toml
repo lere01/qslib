@@ -35,6 +35,7 @@ members = [
     "crates/qslib-test-support",
     "crates/qslib-variational",
 ]
+exclude = ["fuzz"]
 resolver = "3"
 
 [workspace.package]

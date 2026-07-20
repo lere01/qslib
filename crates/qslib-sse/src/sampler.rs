@@ -1,13 +1,11 @@
 //! Sign-safe diagonal insertion/removal sampling.
 
-#![allow(deprecated)]
-
 use crate::{
     BasisSseState, Operator, SseModel, SseModelError, ThermodynamicAccumulator,
     ThermodynamicResults,
 };
 use rand_chacha::ChaCha20Rng;
-use rand_core::{RngCore, SeedableRng};
+use rand_core::{Rng, SeedableRng};
 use std::sync::{Arc, mpsc};
 
 /// Sampler construction or update failure.
@@ -110,7 +108,7 @@ pub struct SseSampler<M, R> {
     beta: f64,
     rng: R,
 }
-impl<M: SseModel, R: RngCore> SseSampler<M, R> {
+impl<M: SseModel, R: Rng> SseSampler<M, R> {
     /// Construct a sampler after validating beta, diagonal support, and trace closure.
     pub fn new(model: M, state: BasisSseState, beta: f64, rng: R) -> Result<Self, SamplerError> {
         if !beta.is_finite() || beta <= 0.0 {
@@ -432,7 +430,7 @@ fn add_stats(left: DiagonalSweepStats, right: DiagonalSweepStats) -> DiagonalSwe
         removals_accepted: left.removals_accepted + right.removals_accepted,
     }
 }
-fn random_unit<R: RngCore>(rng: &mut R) -> f64 {
+fn random_unit<R: Rng>(rng: &mut R) -> f64 {
     (rng.next_u64() as f64) / (u64::MAX as f64)
 }
 fn add_off_stats(
