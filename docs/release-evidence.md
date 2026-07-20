@@ -38,7 +38,7 @@ implementation snapshot. It is not a publication or a release authorization.
 - Packaging: the ABI3 wheel and Maturin source distribution both install in a
   temporary environment; each runs the ten Python contract tests and the exact
   four-site example. The current bundle is
-  `/private/tmp/qslib-release-candidate-20260720h`.
+  `/private/tmp/qslib-release-candidate-20260720j`.
 - Checksums: `SHA256SUMS` is generated from inside the bundle with `./...`
   relative paths and verifies both in place and after relocation.
 
@@ -48,7 +48,6 @@ The remote Linux/macOS/Windows CI matrix is authored but not executed in this
 local-only workflow. The local semver comparison above does not replace a
 Linux registry or release-baseline check. The ncli backend-selection/parity
 adapter remains a separate ownership unit.
-The ncli backend-selection/parity adapter remains a separate ownership unit.
 The Python cdylib is packaged through Maturin; a workspace-wide Cargo release
 link is not a supported way to build that extension on macOS.
 
