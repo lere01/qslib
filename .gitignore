@@ -42,3 +42,5 @@ AGENTS.md
 SECURITY.md
 PLANS.md
 CONTRIBUTING.md
+__pycache__/
+*.pyc
