@@ -53,6 +53,10 @@ implementation snapshot. It is not a publication or a release authorization.
   Linux/macOS/Windows Rust stable and MSRV matrix, Python 3.12/3.13 wheels on
   all three operating systems, Miri, branch coverage, bounded fuzzing, facade
   feature checks, formatting, documentation, and dependency policy.
+- Hosted revalidation (2026-07-20): GitHub Actions run
+  [`29755394438`](https://github.com/lere01/qslib/actions/runs/29755394438) for
+  commit `61c5138` completed successfully with the same 17-job matrix. This
+  run includes the corrected guarded release workflow in the pushed source.
 - ncli parity (2026-07-20 10:20Z): the separately owned parent repository has
   an explicit optional qslib backend with TFIM, signed J1-J2, Rydberg, and exact
   spectrum parity tests. Its native backend remains the default. The adapter
