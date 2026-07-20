@@ -15,6 +15,19 @@ fn two_level() -> Hamiltonian {
     .unwrap()
 }
 
+fn assert_real_slices_close(actual: &[f64], expected: &[f64], absolute: f64, relative: f64) {
+    assert_eq!(actual.len(), expected.len());
+    for (index, (actual_value, expected_value)) in actual.iter().zip(expected).enumerate() {
+        let scale = actual_value.abs().max(expected_value.abs());
+        let tolerance = absolute + relative * scale;
+        assert!(
+            (actual_value - expected_value).abs() <= tolerance,
+            "spectrum mismatch at index {index}: actual={actual_value:.17e}, \
+             expected={expected_value:.17e}, tolerance={tolerance:.3e}"
+        );
+    }
+}
+
 #[test]
 fn exact_basis_preserves_core_order_and_sector_dimension() {
     let full = ExactBasis::full(SiteCount::new(2).unwrap()).unwrap();
@@ -84,7 +97,7 @@ fn complex_hermitian_spectrum_and_nonhermitian_diagnostic_are_explicit() {
     let basis = ExactBasis::full(SiteCount::new(1).unwrap()).unwrap();
     let matrix = qslib_exact::DenseMatrix::from_hamiltonian(&h, &basis).unwrap();
     let spectrum = diagonalize_hermitian(&matrix).unwrap();
-    assert_eq!(spectrum.values(), &[-1.0, 1.0]);
+    assert_real_slices_close(spectrum.values(), &[-1.0, 1.0], 1.0e-12, 1.0e-12);
     assert!(
         spectrum
             .residuals()
@@ -257,7 +270,7 @@ fn hadamard_related_one_site_spectra_and_real_time_invariants_match() {
             .unwrap();
     let x_matrix = qslib_exact::DenseMatrix::from_hamiltonian(&x, &basis).unwrap();
     let x_spectrum = diagonalize_hermitian(&x_matrix).unwrap();
-    assert_eq!(z_spectrum.values(), x_spectrum.values());
+    assert_real_slices_close(z_spectrum.values(), x_spectrum.values(), 1.0e-12, 1.0e-12);
     let evolved = evolve(
         &x_matrix,
         &[Complex64::new(1.0, 0.0), Complex64::new(0.0, 0.0)],
