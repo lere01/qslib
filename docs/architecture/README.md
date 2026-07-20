@@ -150,6 +150,13 @@ accepted evolution controls, exact named NPY arrays, and recoverable completion
 metadata; an independent Python verifier exercises NPY, Parquet, and checksum
 readers in CI.
 
+The qslib-local portion of Milestone 12 establishes the Python boundary in
+`qslib-python`. PyO3 and NumPy are
+isolated in the binding crate, which builds an `abi3-py312` Maturin wheel and
+returns owned arrays from validated coarse-grained geometry, coupling,
+exact-basis, TFIM, Heisenberg, and Rydberg kernels. Core and solver crates do
+not depend on Python, and Python buffers are never retained after a call.
+
 ## Development architecture
 
 qslib uses specification-driven test-first development for supported behavior:

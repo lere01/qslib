@@ -131,6 +131,17 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   legacy migration errors, and an independent Python artifact verifier. Rust
   1.85/stable workspace tests, Clippy, rustdoc, cargo-deny, and focused IO,
   checkpoint-resume, and Python-reader gates pass.
+- [ ] Local qslib portion of M12 complete (2026-07-20 00:29Z): the ABI3
+  PyO3/NumPy binding has structured exceptions, Maturin metadata, owned-array
+  contracts, row-major geometry and coupling resolution, exact basis and
+  TFIM ground-state/matrix bindings, Heisenberg/Rydberg matrix bindings,
+  convention-labelled observables, and TDVP estimate/solve bindings. Ten
+  Python contract tests cover independent four-site and model fixtures,
+  real/imaginary-time signs, negative strides, dtype/rank/read-only inputs,
+  garbage collection, and concurrent entry. Local Python 3.14 wheel tests,
+  Rust 1.85/stable tests, Clippy, rustdoc, formatting, and cargo-deny pass.
+  M12 remains open only for the cross-platform CI evidence and the separately
+  owned ncli backend-selection/parity adapter.
 - [ ] Complete Milestone 12: implement Python bindings and ncli parity adapters.
 - [ ] Complete Milestone 13: implement the physicist-first command line.
 - [ ] Complete Milestone 14: complete guides, examples, API documentation, and
@@ -379,6 +390,12 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   control, and durable restart must reject unsupported seed derivation versions
   rather than silently reinterpret them.
   Date/author: 2026-07-19, primary agent after qslib-architect review.
+- Decision: the first Python binding surface is coarse grained and returns
+  owned NumPy arrays rather than mutable Rust handles or per-sample callbacks.
+  Rationale: this keeps scientific semantics in Rust, makes buffer lifetime
+  explicit, and gives ncli a stable backend boundary before TDVP and broader
+  parity adapters are added.
+  Date/author: 2026-07-20, primary agent after ADR-0005 and M12 inventory.
 
 ## Outcomes and retrospective
 
@@ -426,6 +443,14 @@ Parquet trajectories, recover interrupted dataset publication, and verify the
 result independently from Python. Milestone 12 is the next active boundary;
 publication and remote repository changes remain intentionally outside this
 autonomous run.
+
+M12's qslib-local implementation is complete. The ABI3 wheel imports as
+`qslib_quantum`, validates strided and Fortran-order inputs, resolves
+pair-dependent couplings, reports convention-labelled observables, and
+reproduces exact TFIM, Heisenberg, and Rydberg matrix behavior through owned
+NumPy outputs. Cross-platform wheel jobs are authored but cannot run until CI
+executes, and ncli backend adoption remains a separate ownership boundary
+that must not modify the parent repository without explicit authority.
 
 ## Context and orientation
 

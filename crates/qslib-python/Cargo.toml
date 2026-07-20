@@ -11,6 +11,10 @@ publish.workspace = true
 
 [lib]
 name = "qslib_quantum"
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 qslib = { package = "qslib-quantum", version = "0.1.0", path = "../..", features = ["exact", "variational", "io"] }
+pyo3 = { version = "0.29.0", features = ["abi3-py312", "extension-module"] }
+numpy = "0.29.0"
+num-complex.workspace = true

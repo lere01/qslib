@@ -50,7 +50,7 @@ fn workspace_metadata_matches_the_accepted_package_and_target_map() {
             .is_some_and(|kinds| kinds.iter().any(|kind| kind == "bin"))
     }));
     assert_target(packages["qslib-quantum-cli"], "qslib", "bin");
-    assert_target(packages["qslib-quantum-python"], "qslib_quantum", "lib");
+    assert_target(packages["qslib-quantum-python"], "qslib_quantum", "rlib");
     assert_target(packages["qslib-test-support"], "qslib_test_support", "lib");
 
     let manifest =
