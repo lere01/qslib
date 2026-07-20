@@ -163,14 +163,16 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   passes all 165 applicable checks, and workspace llvm-cov reports 78.28% line
   coverage (71.63% regions; branch data is unavailable from this tool output).
   The remote CI matrix and nightly Miri execution remain external gates.
-- [ ] Local M16 release-candidate preparation (2026-07-20 01:25Z): optimized
+- [ ] Local M16 release-candidate preparation (2026-07-20 02:12Z): optimized
   Rust binaries excluding the Python cdylib, an ABI3 Python wheel, a combined
   Markdown/Rust API site, a portable workspace source archive plus the core
   Cargo package, license/readme/changelog/release-evidence files, and relative
   checksums are available under
-  `/private/tmp/qslib-release-candidate-20260720c`. Clean Python-wheel and CLI
-  smoke runs pass. This is a 0.1.0 candidate; version 1.0.0 remains prohibited
-  until every acceptance gate passes.
+  `/private/tmp/qslib-release-candidate-20260720d`. Its relative checksum
+  manifest covers the binary, wheel, combined documentation, source archives,
+  metadata, and captured exact/SSE JSON smoke outputs. Clean CLI smoke runs
+  pass. This is a 0.1.0 candidate; version 1.0.0 remains prohibited until
+  every acceptance gate passes.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.
