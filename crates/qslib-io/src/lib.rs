@@ -1996,9 +1996,9 @@ impl ColumnarTrajectory {
                 .write(&batch)
                 .map_err(|error| IoError::InvalidData(error.to_string()))?;
             writer
-                .close()
+                .finish()
                 .map_err(|error| IoError::InvalidData(error.to_string()))?;
-            fs::File::open(&temporary)?.sync_all()?;
+            writer.inner().sync_all()?;
             fs::rename(&temporary, path)?;
             sync_directory(parent)?;
             Ok::<(), IoError>(())
