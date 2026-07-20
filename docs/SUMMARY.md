@@ -1,6 +1,7 @@
 # Summary
 
 - [Introduction](index.md)
+- [Installation](installation.md)
 - [Scientific conventions](conventions.md)
 - [Geometry and interactions](geometry-interactions.md)
 - [Operators and models](operators-models.md)
@@ -14,7 +15,9 @@
 - [Command line](cli.md)
 - [Symmetry](symmetry.md)
 - [Reproducibility](reproducibility.md)
+- [Kernel benchmarks](benchmarks.md)
 - [Limitations](limitations.md)
+- [Release evidence](release-evidence.md)
 - [Migration from ncli](migration-ncli.md)
 - [Migration from standalone SSE](migration-sse.md)
 - [Architecture](architecture/README.md)

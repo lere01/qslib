@@ -1,5 +1,11 @@
 # Four-site Heisenberg chain with independently resolved signed couplings.
 # H = sum_<ij> J_ij S_i . S_j, with S = sigma / 2.
+schema_version: qslib-model-input-v1
+conventions:
+  schema: qslib-conventions-v1
+  site_order: row_major
+  byte_order: little_endian
+  basis: z
 model: heisenberg
 basis: z
 couplings:

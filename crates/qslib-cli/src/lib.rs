@@ -3,14 +3,17 @@
 use qslib::exact::{self, DenseMatrix, ExactBasis};
 use qslib::sse::{BasisSseState, LocalSseModel, Operator, SimulationConfig, run_parallel_chains};
 use qslib::{
-    BasisBit, Boundary, DenseCouplings, InteractionChannel, InteractionTable, RectangularGeometry,
-    ResolvedModel, SimulationBasis, SiteCount,
+    BasisBit, Boundary, DenseCouplings, InteractionChannel, InteractionTable, ModelSpecification,
+    RectangularGeometry, ResolvedModel, SimulationBasis, SiteCount,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::fmt::{self, Display, Formatter};
 use std::fs;
 use std::path::Path;
+
+/// Versioned schema for the compact physicist-facing model input envelope.
+pub const MODEL_INPUT_SCHEMA_VERSION: &str = "qslib-model-input-v1";
 
 /// An error reported by the command-line boundary.
 #[derive(Debug)]
@@ -31,7 +34,19 @@ impl Display for CliError {
 impl std::error::Error for CliError {}
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConventionInput {
+    schema: String,
+    site_order: String,
+    byte_order: String,
+    basis: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ModelInput {
+    schema_version: String,
+    conventions: ConventionInput,
     model: String,
     #[serde(default)]
     couplings: Option<Vec<Vec<f64>>>,
@@ -74,11 +89,18 @@ struct ModelInput {
 }
 
 /// Execute one qslib command and return either human-readable or JSON output.
+///
+/// ```
+/// let output = qslib_cli::run(&["inspect".into(), "conventions".into()])?;
+/// assert!(output.contains("site_order"));
+/// # Ok::<(), qslib_cli::CliError>(())
+/// ```
 pub fn run(args: &[String]) -> Result<String, CliError> {
     if args.is_empty() || args.iter().any(|arg| arg == "--help" || arg == "-h") {
         return Ok(usage());
     }
     let json_output = args.iter().any(|arg| arg == "--json");
+    validate_command_args(args)?;
     let value = match args[0].as_str() {
         "inspect" => inspect_command(args)?,
         "model" => model_command(args)?,
@@ -114,11 +136,61 @@ CONFIG is YAML or JSON and uses canonical row-major sites and explicit physical 
         .to_owned()
 }
 
+fn validate_command_args(args: &[String]) -> Result<(), CliError> {
+    let command = args.first().map(String::as_str).unwrap_or_default();
+    let expected_positionals = match (command, args.get(1).map(String::as_str)) {
+        ("inspect", Some("conventions" | "environment")) | ("conformance", Some("self-test")) => 2,
+        ("model", Some("validate"))
+        | ("exact", Some("ground-state"))
+        | ("sse", Some("run"))
+        | ("artifacts", Some("inspect")) => 3,
+        ("exact", Some("evolve")) => 3,
+        _ => return Ok(()),
+    };
+    let mut positional = 2_usize;
+    let mut index = 2_usize;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--json" => index += 1,
+            "--imaginary"
+                if command == "exact" && args.get(1).map(String::as_str) == Some("evolve") =>
+            {
+                index += 1;
+            }
+            "--t-max"
+                if command == "exact" && args.get(1).map(String::as_str) == Some("evolve") =>
+            {
+                if args.get(index + 1).is_none() || args[index + 1].starts_with("--") {
+                    return Err(CliError::new("--t-max requires one numeric value"));
+                }
+                index += 2;
+            }
+            value if value.starts_with('-') => {
+                return Err(CliError::new(format!("unknown command option {value:?}")));
+            }
+            _ => {
+                positional += 1;
+                index += 1;
+            }
+        }
+    }
+    if positional != expected_positionals {
+        return Err(CliError::new("unexpected or missing command argument"));
+    }
+    if command == "exact"
+        && args.get(1).map(String::as_str) == Some("evolve")
+        && option_value(args, "--t-max").is_none()
+    {
+        return Err(CliError::new("exact evolve requires --t-max TIME"));
+    }
+    Ok(())
+}
+
 fn inspect_command(args: &[String]) -> Result<Value, CliError> {
     match args.get(1).map(String::as_str) {
         Some("conventions") => Ok(json!({
             "schema": "qslib-conventions-v1",
-            "site_order": "row_major_y_then_x",
+            "site_order": "row_major",
             "packed_bits": "little_endian_site_zero_is_least_significant",
             "basis_bit_zero": "+1 eigenvalue of the simulation axis",
             "physical_axes": ["x", "y", "z"],
@@ -155,13 +227,15 @@ fn model_command(args: &[String]) -> Result<Value, CliError> {
         ));
     }
     let input = read_input(args.get(2))?;
+    validate_input_contract(&input)?;
     let model = resolve_model(&input)?;
-    Ok(model_summary(&model))
+    Ok(model_summary(&input, &model))
 }
 
 fn exact_command(args: &[String]) -> Result<Value, CliError> {
     let subcommand = args.get(1).map(String::as_str);
     let input = read_input(args.get(2))?;
+    validate_input_contract(&input)?;
     let model = resolve_model(&input)?;
     let matrix = exact_matrix(&model)?;
     match subcommand {
@@ -175,7 +249,8 @@ fn exact_command(args: &[String]) -> Result<Value, CliError> {
                 "dimension": matrix.dimension(),
                 "energy": ground.energy(),
                 "residual": ground.residual(),
-                "normalization": "total energy"
+                "normalization": "total energy",
+                "provenance": provenance(&input, &model)
             }))
         }
         Some("evolve") => {
@@ -194,7 +269,8 @@ fn exact_command(args: &[String]) -> Result<Value, CliError> {
                 "time": time,
                 "imaginary_time": imaginary,
                 "norm": norm,
-                "energy": [energy.re, energy.im]
+                "energy": [energy.re, energy.im],
+                "provenance": provenance(&input, &model)
             }))
         }
         Some(command) => Err(CliError::new(format!("unknown exact command {command:?}"))),
@@ -207,6 +283,7 @@ fn sse_command(args: &[String]) -> Result<Value, CliError> {
         return Err(CliError::new("sse currently supports only run CONFIG"));
     }
     let input = read_input(args.get(2))?;
+    validate_input_contract(&input)?;
     if !input.model.eq_ignore_ascii_case("tfim") {
         return Err(CliError::new(
             "SSE CLI currently supports the TFIM decomposition",
@@ -240,7 +317,7 @@ fn sse_command(args: &[String]) -> Result<Value, CliError> {
     let model = LocalSseModel::tfim_weighted(n, &bonds, &fields).map_err(core_error)?;
     let state = BasisSseState::new(
         vec![BasisBit::Zero; n],
-        vec![Operator::identity(); input.operator_cutoff.unwrap_or(128)],
+        vec![Operator::identity(); checked_operator_cutoff(&input)?],
     )
     .map_err(core_error)?;
     let results = run_parallel_chains(
@@ -281,11 +358,26 @@ fn artifact_command(args: &[String]) -> Result<Value, CliError> {
         .ok_or_else(|| CliError::new("artifact inspect needs PATH"))?;
     let metadata = fs::metadata(path)
         .map_err(|error| CliError::new(format!("cannot inspect {path}: {error}")))?;
+    if !metadata.is_dir() {
+        return Err(CliError::new(
+            "artifact inspection requires a qslib Parquet dataset directory",
+        ));
+    }
+    let manifest =
+        qslib::io::ParquetDatasetManifest::inspect(Path::new(path)).map_err(|error| {
+            CliError::new(format!("invalid qslib artifact dataset {path}: {error}"))
+        })?;
     Ok(json!({
         "path": path,
-        "kind": if metadata.is_dir() { "directory" } else { "file" },
+        "kind": "directory",
         "bytes": metadata.len(),
-        "complete_marker": Path::new(path).join("COMPLETE").is_file()
+        "complete_marker": true,
+        "complete": manifest.complete,
+        "schema_version": manifest.schema_version,
+        "convention_schema": manifest.convention_schema,
+        "config_checksum": manifest.config_checksum,
+        "part_count": manifest.parts.len(),
+        "parts": manifest.parts
     }))
 }
 
@@ -315,7 +407,12 @@ fn conformance_command(args: &[String]) -> Result<Value, CliError> {
             }
         }
     }
-    Ok(json!({"status": "pass", "fixture": "one-site-tfim-z-basis"}))
+    Ok(json!({
+        "status": "smoke_pass",
+        "scope": "one independent one-site TFIM matrix fixture",
+        "fixture_count": 1,
+        "fixture": "one-site-tfim-z-basis"
+    }))
 }
 
 fn read_input(path: Option<&String>) -> Result<ModelInput, CliError> {
@@ -328,6 +425,7 @@ fn read_input(path: Option<&String>) -> Result<ModelInput, CliError> {
 }
 
 fn resolve_model(input: &ModelInput) -> Result<ResolvedModel, CliError> {
+    validate_input_contract(input)?;
     let basis = input
         .basis
         .as_deref()
@@ -434,19 +532,202 @@ fn dense_from_input(input: &ModelInput) -> Result<DenseCouplings, CliError> {
 }
 
 fn exact_matrix(model: &ResolvedModel) -> Result<DenseMatrix, CliError> {
+    let dimension = exact_dimension(model.hamiltonian().site_count().get())?;
+    if dimension != 1 {
+        let entries = dimension
+            .checked_mul(dimension)
+            .ok_or_else(|| CliError::new("exact matrix size overflowed"))?;
+        let bytes = entries
+            .checked_mul(std::mem::size_of::<qslib::Complex64>())
+            .ok_or_else(|| CliError::new("exact matrix byte budget overflowed"))?;
+        const MAX_EXACT_MATRIX_BYTES: usize = 256 * 1024 * 1024;
+        if bytes > MAX_EXACT_MATRIX_BYTES {
+            return Err(CliError::new(format!(
+                "exact calculation needs {bytes} bytes for a dense matrix; limit is {MAX_EXACT_MATRIX_BYTES} bytes"
+            )));
+        }
+    }
     let basis = ExactBasis::full(model.hamiltonian().site_count()).map_err(core_error)?;
     DenseMatrix::from_hamiltonian(model.hamiltonian(), &basis).map_err(core_error)
 }
 
-fn model_summary(model: &ResolvedModel) -> Value {
+fn exact_dimension(site_count: usize) -> Result<usize, CliError> {
+    let shift = u32::try_from(site_count)
+        .map_err(|_| CliError::new("exact calculation site count is too large"))?;
+    1_usize
+        .checked_shl(shift)
+        .ok_or_else(|| CliError::new("exact Hilbert-space dimension overflowed"))
+}
+
+fn checked_operator_cutoff(input: &ModelInput) -> Result<usize, CliError> {
+    const MAX_OPERATOR_CUTOFF: usize = 1_000_000;
+    let cutoff = input.operator_cutoff.unwrap_or(128);
+    if cutoff == 0 || cutoff > MAX_OPERATOR_CUTOFF {
+        return Err(CliError::new(format!(
+            "operator_cutoff must be between 1 and {MAX_OPERATOR_CUTOFF}"
+        )));
+    }
+    Ok(cutoff)
+}
+
+fn validate_input_contract(input: &ModelInput) -> Result<(), CliError> {
+    if input.schema_version != MODEL_INPUT_SCHEMA_VERSION {
+        return Err(CliError::new(format!(
+            "unsupported configuration schema {:?}; expected {}",
+            input.schema_version, MODEL_INPUT_SCHEMA_VERSION
+        )));
+    }
+    if input.conventions.schema != "qslib-conventions-v1"
+        || input.conventions.site_order != "row_major"
+        || input.conventions.byte_order != "little_endian"
+        || !matches!(input.conventions.basis.as_str(), "x" | "y" | "z")
+    {
+        return Err(CliError::new(
+            "configuration conventions must use qslib-conventions-v1, row_major, little_endian, and basis x, y, or z",
+        ));
+    }
+    let selected_basis = input.basis.as_deref().unwrap_or("z");
+    if input.conventions.basis != selected_basis {
+        return Err(CliError::new(format!(
+            "convention basis {:?} does not match model basis {:?}",
+            input.conventions.basis, selected_basis
+        )));
+    }
+    match input.model.to_ascii_lowercase().as_str() {
+        "tfim" => reject_fields(
+            input,
+            &[
+                "omega",
+                "detuning",
+                "j1",
+                "j2",
+                "lx",
+                "ly",
+                "boundary_x",
+                "boundary_y",
+            ],
+        )?,
+        "heisenberg" => reject_fields(
+            input,
+            &[
+                "fields",
+                "omega",
+                "detuning",
+                "j1",
+                "j2",
+                "lx",
+                "ly",
+                "boundary_x",
+                "boundary_y",
+            ],
+        )?,
+        "rydberg" => reject_fields(
+            input,
+            &["fields", "j1", "j2", "lx", "ly", "boundary_x", "boundary_y"],
+        )?,
+        "j1j2" | "j1-j2" => reject_fields(input, &["fields", "omega", "detuning", "couplings"])?,
+        _ => {}
+    }
+    Ok(())
+}
+
+fn reject_fields(input: &ModelInput, names: &[&str]) -> Result<(), CliError> {
+    for name in names {
+        let present = match *name {
+            "omega" => input.omega.is_some(),
+            "detuning" => input.detuning.is_some(),
+            "fields" => input.fields.is_some(),
+            "j1" => input.j1.is_some(),
+            "j2" => input.j2.is_some(),
+            "lx" => input.lx.is_some(),
+            "ly" => input.ly.is_some(),
+            "boundary_x" => input.boundary_x.is_some(),
+            "boundary_y" => input.boundary_y.is_some(),
+            "couplings" => input.couplings.is_some(),
+            _ => false,
+        };
+        if present {
+            return Err(CliError::new(format!(
+                "configuration field {name:?} is not valid for model {:?}",
+                input.model
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn provenance(input: &ModelInput, model: &ResolvedModel) -> Value {
+    json!({
+        "schema_version": input.schema_version,
+        "convention_schema": input.conventions.schema,
+        "site_order": input.conventions.site_order,
+        "byte_order": input.conventions.byte_order,
+        "simulation_basis": model.basis().to_string(),
+        "model_family": model.family(),
+        "resolved_interactions": model.interactions().len(),
+        "operator_terms": model.hamiltonian().terms().len()
+    })
+}
+
+fn model_summary(input: &ModelInput, model: &ResolvedModel) -> Value {
+    let interactions = model
+        .interactions()
+        .iter()
+        .map(|term| {
+            json!({
+                "first": term.bond().first().get(),
+                "second": term.bond().second().get(),
+                "channel": interaction_channel_name(term.channel()),
+                "name": term.identity().name(),
+                "coefficient": term.coefficient(),
+                "image_translation": [term.bond().image_translation().0, term.bond().image_translation().1],
+                "source": term.bond().source().get(),
+                "direction": [term.bond().direction().0, term.bond().direction().1]
+            })
+        })
+        .collect::<Vec<_>>();
+    let specification = match model.specification() {
+        ModelSpecification::Tfim { fields } => json!({"fields": fields}),
+        ModelSpecification::Heisenberg => json!({}),
+        ModelSpecification::Rydberg { omega, detuning } => {
+            json!({"omega": omega, "detuning": detuning})
+        }
+        ModelSpecification::J1J2 { geometry, j1, j2 } => json!({
+            "lx": geometry.lx(),
+            "ly": geometry.ly(),
+            "boundary_x": boundary_name(geometry.boundary_x()),
+            "boundary_y": boundary_name(geometry.boundary_y()),
+            "j1": j1,
+            "j2": j2
+        }),
+    };
     json!({
         "model": model.family(),
         "basis": model.basis().to_string(),
         "site_count": model.hamiltonian().site_count().get(),
         "interaction_terms": model.interactions().len(),
         "operator_terms": model.hamiltonian().terms().len(),
-        "status": "valid"
+        "status": "valid",
+        "provenance": provenance(input, model),
+        "resolved_interactions": interactions,
+        "resolved_specification": specification
     })
+}
+
+fn interaction_channel_name(channel: &InteractionChannel) -> &'static str {
+    match channel {
+        InteractionChannel::IsingZZ => "ising_zz",
+        InteractionChannel::HeisenbergExchange => "heisenberg_exchange",
+        InteractionChannel::RydbergDensityDensity => "rydberg_density_density",
+        InteractionChannel::Generic(_) => "generic",
+    }
+}
+
+fn boundary_name(boundary: Boundary) -> &'static str {
+    match boundary {
+        Boundary::Open => "open",
+        Boundary::Periodic => "periodic",
+    }
 }
 
 fn option_value(args: &[String], name: &str) -> Option<String> {
@@ -486,7 +767,10 @@ mod tests {
         let path = std::env::temp_dir().join(format!("qslib-cli-{}.yaml", std::process::id()));
         fs::write(
             &path,
-            "model: tfim\ncouplings: [[0.0]]\nfields: [2.0]\nbasis: z\n",
+            format!(
+                "{}model: tfim\ncouplings: [[0.0]]\nfields: [2.0]\nbasis: z\n",
+                valid_config_header()
+            ),
         )
         .unwrap();
         let output = super::run(&[
@@ -501,6 +785,19 @@ mod tests {
         assert_eq!(value["site_count"], 1);
         assert_eq!(value["energy"], -2.0);
         assert!(value["residual"].as_f64().unwrap() < 1.0e-12);
+        let negative_time = super::run(&[
+            "exact".into(),
+            "evolve".into(),
+            path.display().to_string(),
+            "--t-max".into(),
+            "-0.1".into(),
+            "--json".into(),
+        ])
+        .unwrap();
+        assert!(negative_time.contains("imaginary_time"));
+        assert!(
+            super::run(&["inspect".into(), "conventions".into(), "--imaginary".into()]).is_err()
+        );
         fs::remove_file(path).unwrap();
     }
 
@@ -508,7 +805,14 @@ mod tests {
     fn invalid_model_reports_the_physical_field() {
         let path =
             std::env::temp_dir().join(format!("qslib-cli-invalid-{}.yaml", std::process::id()));
-        fs::write(&path, "model: tfim\ncouplings: [[0.0]]\nfields: [NaN]\n").unwrap();
+        fs::write(
+            &path,
+            format!(
+                "{}model: tfim\ncouplings: [[0.0]]\nfields: [NaN]\n",
+                valid_config_header()
+            ),
+        )
+        .unwrap();
         let error = super::run(&[
             "model".into(),
             "validate".into(),
@@ -520,16 +824,43 @@ mod tests {
     }
 
     #[test]
+    fn config_requires_versioned_conventions_and_rejects_unknown_fields() {
+        let missing_metadata = serde_yaml_ng::from_str::<super::ModelInput>(
+            "model: tfim\ncouplings: [[0.0]]\nfields: [2.0]\n",
+        )
+        .unwrap_err();
+        assert!(missing_metadata.to_string().contains("schema_version"));
+
+        let unknown = format!(
+            "{}model: tfim\ncouplings: [[0.0]]\nfields: [2.0]\nunexpected: true\n",
+            valid_config_header()
+        );
+        let error = serde_yaml_ng::from_str::<super::ModelInput>(&unknown).unwrap_err();
+        assert!(error.to_string().contains("unexpected"));
+    }
+
+    #[test]
     fn convention_and_artifact_commands_have_stable_json_fields() {
         let conventions =
             super::run(&["inspect".into(), "conventions".into(), "--json".into()]).unwrap();
         let value: serde_json::Value = serde_json::from_str(&conventions).unwrap();
-        assert_eq!(value["site_order"], "row_major_y_then_x");
+        assert_eq!(value["site_order"], "row_major");
 
         let directory =
             std::env::temp_dir().join(format!("qslib-cli-artifact-{}", std::process::id()));
         fs::create_dir_all(&directory).unwrap();
         fs::write(directory.join("COMPLETE"), b"complete\n").unwrap();
+        let malformed = super::run(&[
+            "artifacts".into(),
+            "inspect".into(),
+            directory.display().to_string(),
+            "--json".into(),
+        ]);
+        assert!(malformed.is_err(), "a marker is not a complete dataset");
+
+        fs::remove_file(directory.join("COMPLETE")).unwrap();
+        let mut manifest = qslib::io::ParquetDatasetManifest::new("a".repeat(64)).unwrap();
+        manifest.finish(&directory).unwrap();
         let inspected = super::run(&[
             "artifacts".into(),
             "inspect".into(),
@@ -540,6 +871,40 @@ mod tests {
         let value: serde_json::Value = serde_json::from_str(&inspected).unwrap();
         assert_eq!(value["kind"], "directory");
         assert_eq!(value["complete_marker"], true);
+        assert_eq!(value["schema_version"], "qslib-parquet-dataset-v1");
+        assert_eq!(value["complete"], true);
+        assert_eq!(value["part_count"], 0);
+
+        let marker_path = directory.join("COMPLETE");
+        let marker = fs::read(&marker_path).unwrap();
+        fs::remove_file(&marker_path).unwrap();
+        let missing_marker = super::run(&[
+            "artifacts".into(),
+            "inspect".into(),
+            directory.display().to_string(),
+            "--json".into(),
+        ]);
+        assert!(missing_marker.is_err());
+        assert!(!marker_path.exists(), "inspection must not repair markers");
+        fs::write(&marker_path, marker).unwrap();
+
+        let manifest_path = directory.join("manifest.json");
+        let manifest = fs::read_to_string(&manifest_path).unwrap();
+        fs::write(
+            &manifest_path,
+            manifest.replace("qslib-parquet-dataset-v1", "qslib-parquet-dataset-v0"),
+        )
+        .unwrap();
+        let wrong_schema = super::run(&[
+            "artifacts".into(),
+            "inspect".into(),
+            directory.display().to_string(),
+            "--json".into(),
+        ]);
+        assert!(
+            wrong_schema.is_err(),
+            "unsupported artifact schema must fail"
+        );
         fs::remove_dir_all(directory).unwrap();
     }
 
@@ -559,5 +924,49 @@ mod tests {
                 std::panic::catch_unwind(|| serde_yaml_ng::from_str::<super::ModelInput>(&text));
             assert!(result.is_ok(), "parser panicked for seed {seed}");
         }
+    }
+
+    #[test]
+    fn structured_config_fuzz_never_panics_during_resolution() {
+        let mut resolved_count = [0_usize; 4];
+        for seed in 0_u64..256 {
+            let model_index = (seed % 4) as usize;
+            let model = match model_index {
+                0 => "tfim",
+                1 => "heisenberg",
+                2 => "rydberg",
+                _ => "j1j2",
+            };
+            let body = match model_index {
+                0 => "\"couplings\":[[0.0,1.0],[1.0,0.0]],\"fields\":[0.5,0.5]",
+                1 => "\"couplings\":[[0.0,1.0],[1.0,0.0]]",
+                2 => {
+                    "\"couplings\":[[0.0,1.0],[1.0,0.0]],\"omega\":[1.0,1.0],\"detuning\":[0.2,0.2]"
+                }
+                _ => "\"lx\":2,\"ly\":2,\"j1\":1.0,\"j2\":0.25",
+            };
+            let unknown = if (seed / 4) % 2 == 1 {
+                format!(",\"unicode\":\"λ🙂{seed}\"")
+            } else {
+                String::new()
+            };
+            let payload = format!(
+                "{{\"schema_version\":\"qslib-model-input-v1\",\"conventions\":{{\"schema\":\"qslib-conventions-v1\",\"site_order\":\"row_major\",\"byte_order\":\"little_endian\",\"basis\":\"z\"}},\"model\":\"{model}\",{body}{unknown}}}"
+            );
+            let parsed =
+                std::panic::catch_unwind(|| serde_yaml_ng::from_str::<super::ModelInput>(&payload))
+                    .expect("structured parser must not panic");
+            if let Ok(input) = parsed {
+                let resolution = std::panic::catch_unwind(|| super::resolve_model(&input))
+                    .expect("model validation must not panic");
+                assert!(resolution.is_ok(), "valid structured fixture must resolve");
+                resolved_count[model_index] += 1;
+            }
+        }
+        assert_eq!(resolved_count, [32, 32, 32, 32]);
+    }
+
+    fn valid_config_header() -> &'static str {
+        "schema_version: qslib-model-input-v1\nconventions:\n  schema: qslib-conventions-v1\n  site_order: row_major\n  byte_order: little_endian\n  basis: z\n"
     }
 }

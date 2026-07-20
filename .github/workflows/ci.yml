@@ -57,6 +57,8 @@ jobs:
         run: cargo +stable test --locked -p qslib-test-support --test conventions --test workspace
       - name: Check Markdown links
         run: python3 tools/check_markdown_links.py
+      - name: Run bounded structured CLI fuzz smoke
+        run: cargo +stable test --locked -p qslib-quantum-cli --lib structured_config_fuzz_never_panics_during_resolution
       - name: Install cargo-deny
         run: cargo +stable install cargo-deny --version 0.20.2 --locked
       - name: Check dependency policy
@@ -75,6 +77,7 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/qslib-venv"
           "$RUNNER_TEMP/qslib-venv/bin/pip" install --disable-pip-version-check "$RUNNER_TEMP"/qslib-wheel/*.whl pytest numpy
           "$RUNNER_TEMP/qslib-venv/bin/pytest" -q crates/qslib-python/tests/python_contract.py
+          "$RUNNER_TEMP/qslib-venv/bin/python" examples/python_exact_ground_state.py
 
   python-wheels:
     name: Python wheel (${{ matrix.os }}, Python ${{ matrix.python }})
@@ -103,6 +106,7 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check --find-links wheelhouse qslib-quantum pytest numpy
           python -m pytest -q crates/qslib-python/tests/python_contract.py
+          python examples/python_exact_ground_state.py
 
   features:
     name: Facade feature boundaries

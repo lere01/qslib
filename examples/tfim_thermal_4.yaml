@@ -1,6 +1,12 @@
 # Tiny SSE demonstration. Reduce the sweep counts only for a quick smoke run;
 # production estimates require thermalization, autocorrelation, and confidence
 # analysis appropriate to the physical question.
+schema_version: qslib-model-input-v1
+conventions:
+  schema: qslib-conventions-v1
+  site_order: row_major
+  byte_order: little_endian
+  basis: z
 model: tfim
 basis: z
 couplings:

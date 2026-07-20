@@ -415,6 +415,7 @@ fn parquet_dataset_manifest_is_append_only_and_requires_completion_marker() {
     let loaded = ParquetDatasetManifest::load(&root).unwrap();
     assert!(loaded.complete);
     assert_eq!(loaded.parts.len(), 1);
+    assert_eq!(ParquetDatasetManifest::inspect(&root).unwrap(), loaded);
     assert_eq!(
         ColumnarTrajectory::read_parquet(&root.join("part-000.parquet")).unwrap(),
         table
@@ -425,6 +426,8 @@ fn parquet_dataset_manifest_is_append_only_and_requires_completion_marker() {
             .is_err()
     );
     fs::remove_file(root.join(qslib_io::DATASET_COMPLETE_MARKER)).unwrap();
+    assert!(ParquetDatasetManifest::inspect(&root).is_err());
+    assert!(!root.join(qslib_io::DATASET_COMPLETE_MARKER).exists());
     let recovered = ParquetDatasetManifest::load(&root).unwrap();
     assert!(recovered.complete);
     assert_eq!(
@@ -432,6 +435,11 @@ fn parquet_dataset_manifest_is_append_only_and_requires_completion_marker() {
         b"qslib-dataset-complete-v1\n"
     );
     fs::write(root.join(qslib_io::DATASET_COMPLETE_MARKER), b"wrong\n").unwrap();
+    assert!(ParquetDatasetManifest::inspect(&root).is_err());
+    assert_eq!(
+        fs::read(root.join(qslib_io::DATASET_COMPLETE_MARKER)).unwrap(),
+        b"wrong\n"
+    );
     assert!(ParquetDatasetManifest::load(&root).unwrap().complete);
     let _ = fs::remove_dir_all(root);
 }

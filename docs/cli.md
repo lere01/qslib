@@ -24,10 +24,27 @@ triangle entry is one resolved pair coefficient, including zero coefficients.
 `basis` names the simulation basis (`z`, `x`, or `y` where the model supports
 it), while physical observable axes remain separate concepts.
 
+Every configuration must declare the versioned scientific contract. The CLI
+rejects unknown fields and rejects convention metadata that does not match the
+selected model basis:
+
+```yaml
+schema_version: qslib-model-input-v1
+conventions:
+  schema: qslib-conventions-v1
+  site_order: row_major
+  byte_order: little_endian
+  basis: z
+```
+
+JSON results include a `provenance` object with this schema, the resolved
+model family, basis, interaction count, and operator-term count. This makes a
+result inspectable without guessing which convention was used.
+
 For TFIM,
 
 \[
-H=-\sum_{i<j}J_{ij}\sigma_i^z\sigma_j^z-sum_i h_i\sigma_i^x
+ H=-\sum_{i<j}J_{ij}\sigma_i^z\sigma_j^z-\sum_i h_i\sigma_i^x
 \]
 
 when `basis: z`. `fields` therefore contains one transverse field per site.
@@ -61,6 +78,15 @@ energy per site across independent logical chains. It does not claim an
 autocorrelation-corrected confidence interval; production studies must choose
 thermalization, sweep, chain, and uncertainty controls for the physical
 question.
+
+`artifacts inspect PATH` accepts a qslib Parquet dataset directory. It validates
+the versioned manifest, exact completion marker, immutable part checksums, and
+returns the configuration checksum and convention schema. A directory that
+only happens to contain a file named `COMPLETE` is rejected.
+
+`conformance self-test` reports `smoke_pass` for one independent one-site TFIM
+matrix fixture. It is an installation smoke test, not a replacement for the
+full conformance suite run by CI.
 
 ## Worked examples
 

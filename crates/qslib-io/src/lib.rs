@@ -2182,6 +2182,28 @@ impl ParquetDatasetManifest {
             Self::recover(directory)
         }
     }
+    /// Inspect a complete dataset without repairing or otherwise mutating it.
+    ///
+    /// Unlike [`Self::load`], this method reports a missing or incorrect
+    /// completion marker as an error and never republishes one. It is intended
+    /// for read-only CLI and audit operations.
+    pub fn inspect(directory: &Path) -> Result<Self, IoError> {
+        let value = Self::from_json(&fs::read_to_string(directory.join("manifest.json"))?)?;
+        if !value.complete {
+            return Err(IoError::InvalidData(
+                "Parquet dataset is not marked complete".into(),
+            ));
+        }
+        if fs::read(directory.join(DATASET_COMPLETE_MARKER))?.as_slice()
+            != b"qslib-dataset-complete-v1\n"
+        {
+            return Err(IoError::InvalidData(
+                "Parquet dataset completion marker is missing or invalid".into(),
+            ));
+        }
+        value.validate_parts(directory)?;
+        Ok(value)
+    }
     /// Recover a dataset whose complete manifest was durable but whose marker
     /// was interrupted or lost. Recovery revalidates every immutable part,
     /// then atomically republishes the exact marker before returning.

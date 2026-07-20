@@ -9,6 +9,8 @@ through Rust, the command line, and Python.
 - [Scientific conventions](conventions.md) - canonical site order, bits,
   physical axes, bases, couplings, boundaries, and normalization.
 - [CLI guide](cli.md) - run the four-site exact and tiny SSE examples.
+- [Installation](installation.md) - install the command, Rust library, and
+  optional Python wheel.
 - [Python guide](python.md) - use the `qslib_quantum` NumPy binding.
 - [Geometry and interactions](geometry-interactions.md) - pair-dependent and
   disordered couplings.
@@ -36,8 +38,10 @@ Build the Rust API reference locally with:
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features
 ```
 
-The generated entry point is `target/doc/qslib/index.html`. The API reference
-is generated output and is intentionally not committed to the source tree.
+The generated entry point is `target/doc/qslib/index.html`. The combined
+published site also provides the [Rust API reference](api/qslib/index.html).
+The API reference is generated output and is intentionally not committed to
+the source tree.
 
 ## Architecture and governance
 

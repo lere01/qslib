@@ -18,6 +18,11 @@ def main() -> int:
             path = target.split("#", 1)[0].split("?", 1)[0]
             if not path:
                 continue
+            # The combined site copies Rust docs beside the mdBook output.
+            # This virtual target does not exist in the source checkout, so
+            # the site builder validates it after copying the API tree.
+            if path == "api/qslib/index.html":
+                continue
             resolved = (source.parent / path).resolve()
             if not resolved.exists():
                 errors.append(f"{source.relative_to(ROOT)}: missing {target}")

@@ -143,30 +143,32 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   M12 remains open only for the cross-platform CI evidence and the separately
   owned ncli backend-selection/parity adapter.
 - [ ] Complete Milestone 12: implement Python bindings and ncli parity adapters.
-- [x] (2026-07-20 01:02Z) Completed qslib-local Milestone 13: implemented the
-  physicist-first `qslib` command with convention and environment inspection,
-  YAML/JSON model validation, exact ground-state and real/imaginary-time
-  evolution, TFIM SSE smoke runs, artifact inspection, and conformance
-  self-tests. JSON and human output, physical-field errors, four-site exact
-  examples, and the tiny SSE example are covered by CLI tests.
-- [x] (2026-07-20 01:18Z) Completed qslib-local Milestone 14: added the
-  physics-first documentation index and mdBook summary, CLI/Python guides,
-  reproducibility and limitations guidance, ncli and standalone-SSE migration
-  notes, runnable examples, Markdown link checking, and a combined local
-  Markdown/Rust API site builder. `mdbook build`, `cargo doc`, the link checker,
-  and all documented CLI examples pass locally.
-- [ ] In progress (2026-07-20 01:46Z): M15 hardening now has a reporting
-  benchmark for matrix action, exact diagonalization, expectation values, and
-  TDVP statistics; a bounded configuration-parser fuzz test; full feature,
-  MSRV, stable, Clippy, rustdoc, formatting, cargo-deny, link, mdBook, and
-  LLVM-instrumented test executions. A nightly Miri core job is authored for CI. The
-  remote CI matrix and semver baseline remain unexecuted owner-gated checks.
-- [ ] Local M16 release-candidate preparation (2026-07-20 01:46Z): optimized
+- [x] (2026-07-20 01:25Z) Completed qslib-local Milestone 13: the CLI now
+  uses qslib-io's strict Parquet dataset loader for artifact inspection, rejects
+  unknown or unversioned configuration fields, validates model-specific fields
+  and command options, reports resolved interaction identities and coefficients,
+  emits provenance, and preflights dense exact-memory budgets. Architect closure
+  review approved local closure after the strict artifact, schema, option,
+  resource, and resolved-model audit.
+- [x] (2026-07-20 01:25Z) Completed qslib-local Milestone 14: added an
+  installation chapter, combined-site API links, Python example execution in
+  CI, a doctested CLI Rust example, corrected CLI mathematics, and a guarded
+  documentation-site output path. Architect closure review approved local
+  closure after the relative API-link and generated-site checks passed.
+- [ ] In progress (2026-07-20 01:25Z): M15 hardening now benchmarks geometry,
+  interaction resolution, matrix construction/action, exact diagonalization,
+  expectation, TDVP statistics/solve, and short SSE sweeps, with a recorded
+  same-host baseline. Structured parser/resolution fuzz smoke coverage and a
+  bounded CI invocation are authored. The remote CI matrix, Miri execution,
+  semver baseline, and broader coverage evidence remain owner-gated or external.
+- [ ] Local M16 release-candidate preparation (2026-07-20 01:25Z): optimized
   Rust binaries excluding the Python cdylib, an ABI3 Python wheel, a combined
-  Markdown/Rust API site, license/readme/changelog files, checksums, and clean
-  Python-wheel and CLI smoke runs are available under
-  `/private/tmp/qslib-release-candidate`. This is a 0.1.0 candidate; version
-  1.0.0 remains prohibited until every acceptance gate passes.
+  Markdown/Rust API site, a portable workspace source archive plus the core
+  Cargo package, license/readme/changelog/release-evidence files, and relative
+  checksums are available under
+  `/private/tmp/qslib-release-candidate-20260720c`. Clean Python-wheel and CLI
+  smoke runs pass. This is a 0.1.0 candidate; version 1.0.0 remains prohibited
+  until every acceptance gate passes.
 - [ ] Complete Milestone 15: complete performance, fuzzing, portability,
   dependency, and API-stability hardening.
 - [ ] Complete Milestone 16: build and validate the qslib 1.0 release candidate.
@@ -299,6 +301,42 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   Evidence: `cargo miri --version` reports that `cargo-miri` is unavailable;
   the repository now authors a nightly Ubuntu Miri job for the core tests so
   the required safety gate can run on a supported host.
+- Observation: compact CLI model input cannot reuse qslib-io's
+  `qslib-config-v1` identifier because that schema already names a complete
+  `ScientificConfig` document. The two documents have different fields and
+  reconstruction guarantees.
+  Evidence: the architect audit caught the collision; the CLI now uses
+  `qslib-model-input-v1` while retaining shared convention metadata.
+- Observation: a documentation generator's destination marker must survive
+  mdBook's output replacement. The ownership marker is therefore written
+  after mdBook finishes and is required before a later recursive replacement.
+  Evidence: a same-destination rebuild now succeeds while an unowned directory
+  is refused.
+- Observation: Cargo cannot package the entire unpublished workspace as
+  registry-ready `.crate` files because path dependencies such as
+  `qslib-quantum-core` do not exist on crates.io. A portable source archive and
+  the independently packageable core crate are included instead; publication
+  remains disabled.
+  Evidence: `cargo package --workspace --no-verify` packages core then fails
+  resolving the unpublished core dependency for the exact crate.
+- Observation: CLI artifact inspection must use the same transactional loader
+  as scientific consumers. A filename named `COMPLETE` is not evidence of a
+  complete dataset; marker bytes, manifest schema, configuration checksum, and
+  every immutable part must be validated together.
+  Evidence: the architect's M13 audit found that the previous CLI accepted
+  `complete\n`; the red test now rejects it and the green path calls
+  `ParquetDatasetManifest::load`.
+- Observation: a physics-facing model validation result is incomplete if it
+  reports only counts. Pair identities, signed coefficients, site parameters,
+  geometry, boundaries, convention schema, and resolved provenance are needed
+  to audit a disordered or frustrated Hamiltonian.
+  Evidence: the CLI now emits `resolved_interactions`,
+  `resolved_specification`, and a provenance object in JSON output.
+- Observation: exact CLI commands need a resource contract even when the Rust
+  kernels themselves are checked. Dense Hilbert-space matrices can otherwise
+  request infeasible allocations before an error is returned.
+  Evidence: the CLI now computes checked dimensions and enforces a 256 MiB
+  dense-matrix budget before construction, with focused command tests.
 
 ## Decision log
 
@@ -443,6 +481,21 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   avoids pretending that an extension module is an ordinary standalone Rust
   dynamic library on macOS.
   Date/author: 2026-07-20, primary agent after the optimized-link audit.
+- Decision: CLI configurations use the distinct physicist-facing
+  `qslib-model-input-v1` envelope plus the shared `qslib-conventions-v1`
+  metadata, require canonical `row_major` and
+  `little_endian` metadata, reject unknown and model-inapplicable fields, and
+  include a resolved provenance object in stable JSON results.
+  Rationale: a typo or omitted basis convention must never silently become a
+  different scientific run, and downstream artifact consumers need to audit
+  the resolved model without reconstructing it from counts.
+  Date/author: 2026-07-20, primary agent after architect M13 audit.
+- Decision: `qslib artifacts inspect` is a strict Parquet dataset inspection
+  command, not generic filesystem metadata. It delegates marker, schema,
+  checksum, and part validation to `qslib-io` and returns manifest provenance.
+  Rationale: duplicate artifact semantics in a CLI would drift from the
+  durable IO contract and make incomplete results look publishable.
+  Date/author: 2026-07-20, primary agent after architect M13 audit.
 
 ## Outcomes and retrospective
 
@@ -1237,7 +1290,7 @@ At every stopping point, update `Progress`, `Surprises and discoveries`, and the
 
 ## External authority and owner gates
 
-### Current gate status, updated 2026-07-20 01:46Z
+### Current gate status, updated 2026-07-20 01:25Z
 
 Second resume record: on 2026-07-19 the owner resolved every reduced Milestone 0
 gate. Toolchain and dependency downloads plus local commits are authorized.

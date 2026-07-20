@@ -33,6 +33,14 @@ fn documented_exact_examples_execute_with_stable_semantics() {
     ]);
     assert_eq!(heisenberg["model"], "heisenberg");
     assert_eq!(heisenberg["interaction_terms"], 6);
+    assert_eq!(heisenberg["provenance"]["site_order"], "row_major");
+    assert!(
+        heisenberg["resolved_interactions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|term| term["coefficient"] == -0.5)
+    );
 
     let evolved = run_json(&[
         "exact",

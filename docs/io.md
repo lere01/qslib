@@ -25,6 +25,11 @@ written last. Readers must validate checksums before interpreting arrays. A
 seed is provenance, not a substitute for storing realized disorder or resolved
 coefficients.
 
+`ParquetDatasetManifest::load` may explicitly recover a durable complete
+manifest whose marker publication was interrupted. Read-only audit tools use
+`ParquetDatasetManifest::inspect`, which validates the exact marker and parts
+without rewriting user data.
+
 The independent standard-library verifier in
 [`tools/verify_io_artifacts.py`](../tools/verify_io_artifacts.py) checks
 checkpoint JSON/NPY structure and completed Parquet framing without importing
