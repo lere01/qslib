@@ -168,12 +168,12 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   execution of the authored Linux/macOS/Windows CI matrix; local benchmarks,
   generated tests, fuzzing, Miri, dependency audit, semver, and coverage
   evidence are complete.
-- [ ] Local M16 release-candidate preparation (2026-07-20 06:18Z): optimized
-  Rust binaries excluding the Python cdylib, an ABI3 Python wheel, a combined
-  Markdown/Rust API site, a portable workspace source archive plus the core
-  Cargo package, license/readme/changelog/release-evidence files, and relative
-  checksums are available under
-  `/private/tmp/qslib-release-candidate-20260720j`. It includes a Python sdist,
+- [x] (2026-07-20 06:18Z) Completed local M16 release-candidate preparation:
+  optimized Rust binaries excluding the Python cdylib, an ABI3 Python wheel, a
+  combined Markdown/Rust API site, a portable workspace source archive plus the
+  core Cargo package, license/readme/changelog/release-evidence files, and
+  relative checksums are available under
+  `/private/tmp/qslib-release-candidate-20260720k`. It includes a Python sdist,
   explicit `RELEASE_NOTES.md`, source revision/toolchain metadata, and a
   regenerated core Cargo package. Its checksum manifest uses `./...` relative
   paths, passes in place and after relocation, and covers the binary, wheel,
