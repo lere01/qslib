@@ -155,12 +155,14 @@ field, so capabilities listed under non-goals are not allowed to delay 1.0.
   CI, a doctested CLI Rust example, corrected CLI mathematics, and a guarded
   documentation-site output path. Architect closure review approved local
   closure after the relative API-link and generated-site checks passed.
-- [ ] In progress (2026-07-20 01:25Z): M15 hardening now benchmarks geometry,
+- [ ] In progress (2026-07-20 02:05Z): M15 hardening now benchmarks geometry,
   interaction resolution, matrix construction/action, exact diagonalization,
   expectation, TDVP statistics/solve, and short SSE sweeps, with a recorded
   same-host baseline. Structured parser/resolution fuzz smoke coverage and a
-  bounded CI invocation are authored. The remote CI matrix, Miri execution,
-  semver baseline, and broader coverage evidence remain owner-gated or external.
+  bounded CI invocation are authored. A local previous-commit semver check now
+  passes all 165 applicable checks, and workspace llvm-cov reports 78.28% line
+  coverage (71.63% regions; branch data is unavailable from this tool output).
+  The remote CI matrix and nightly Miri execution remain external gates.
 - [ ] Local M16 release-candidate preparation (2026-07-20 01:25Z): optimized
   Rust binaries excluding the Python cdylib, an ABI3 Python wheel, a combined
   Markdown/Rust API site, a portable workspace source archive plus the core
@@ -555,8 +557,9 @@ qslib-local CLI milestone is now complete: documented four-site and tiny SSE
 commands execute through public kernels, and JSON output is tested as a stable
 machine-facing surface. M15 hardening and M16 local artifact preparation are
 in progress. The local release candidate has a reproducible checksum manifest
-and clean-environment smoke evidence, but cross-platform CI, Miri execution,
-semver baseline review, and ncli backend parity remain open gates.
+and clean-environment smoke evidence; local semver and coverage evidence are
+now recorded, while cross-platform CI, Miri execution, and ncli backend parity
+remain open gates.
 
 ## Context and orientation
 
@@ -1290,7 +1293,7 @@ At every stopping point, update `Progress`, `Surprises and discoveries`, and the
 
 ## External authority and owner gates
 
-### Current gate status, updated 2026-07-20 01:25Z
+### Current gate status, updated 2026-07-20 02:05Z
 
 Second resume record: on 2026-07-19 the owner resolved every reduced Milestone 0
 gate. Toolchain and dependency downloads plus local commits are authorized.
@@ -1316,6 +1319,15 @@ remain prohibited.
   locally before that gate.
 - Milestone 12 changes to the separate ncli ownership unit require later
   coordinated authority now that qslib is a dedicated repository.
+- Local semver evidence is available: `cargo-semver-checks 0.42.0` compared
+  `HEAD` with baseline commit `2584261` as an assumed patch release and passed
+  165 checks with 12 skips. This is an intra-repository API review, not a
+  registry release check.
+- Local workspace coverage evidence is available from
+  `cargo llvm-cov --locked --workspace --all-features --summary-only`: 78.28%
+  line coverage, 71.63% region coverage, and no branch counters emitted by the
+  installed tool. The report identified the CLI entry point and Python FFI as
+  expected uninstrumented paths in this Rust-only run.
 
 Before the autonomous implementation goal begins, the owner should decide or
 authorize these items:
