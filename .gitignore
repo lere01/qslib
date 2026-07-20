@@ -31,3 +31,12 @@ docs/governance/target/
 
 /target/
 /fuzz/target/
+
+# Local-only agent, governance, and planning metadata.
+.agents/
+.codex/
+docs/governance/
+docs/plans
+AGENTS.md
+SECURITY.md
+PLANS.md
