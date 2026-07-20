@@ -77,10 +77,10 @@ jobs:
           dist/bin/qslib --help
           cargo +stable install mdbook --version 0.5.4 --locked
           python3 tools/build_docs_site.py dist/qslib-site
-          cp README.md LICENSE RELEASE_NOTES.md dist/
+          cp README.md LICENSE dist/
           cp docs/release-evidence.md dist/
           tar -C dist -czf "dist/qslib-$version-artifacts.tar.gz" \
-            bin rust-source wheels qslib-site LICENSE README.md RELEASE_NOTES.md release-evidence.md
+            bin rust-source wheels qslib-site LICENSE README.md release-evidence.md
           printf 'qslib version: %s\ncommit: %s\n' "$version" "$(git rev-parse HEAD)" > dist/BUILD_METADATA.txt
           (cd dist && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > SHA256SUMS)
           (cd dist && shasum -a 256 -c SHA256SUMS)

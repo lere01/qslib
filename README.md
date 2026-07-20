@@ -76,15 +76,10 @@ for version pinning, checksums, and the prepublication Git dependency path.
 - [Rust toolchain and MSRV](docs/toolchain-policy.md)
 - [Contribution policy](docs/contribution-policy.md)
 - [Security policy](docs/security-policy.md)
-- [Changelog](CHANGELOG.md)
-- [Local release notes](RELEASE_NOTES.md)
+- [Release notes](https://github.com/lere01/qslib/releases)
 - [Apache-2.0 license](LICENSE)
 
-External publication is disabled. The `qslib` crates.io and PyPI distribution
-names belong to an unrelated project. The approved Rust and Python distribution
-name is `qslib-quantum`; Rust imports use `qslib`, while Python imports use the
-collision-safe `qslib_quantum`. Naming does not authorize publication. See
-[ADR-0009](docs/decisions/0009-registry-package-names.md).
-
-The project does not currently accept unsolicited external contributions. See
-the [contribution policy](docs/contribution-policy.md) for the current status.
+Releases are published on the GitHub releases page. The `qslib` crates.io and
+PyPI distribution names belong to an unrelated project. The approved Rust and
+Python distribution name is `qslib-quantum`; Rust imports use `qslib`, while
+Python imports use the collision-safe `qslib_quantum`.
