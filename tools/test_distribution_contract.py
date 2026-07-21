@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DistributionContractTests(unittest.TestCase):
-    def test_cargo_distribution_set_has_owner_gated_publish_metadata(self) -> None:
+    def test_cargo_distribution_set_is_registry_publishable(self) -> None:
         result = subprocess.run(
             ["cargo", "metadata", "--locked", "--no-deps", "--format-version", "1"],
             cwd=ROOT,
@@ -44,7 +44,15 @@ class DistributionContractTests(unittest.TestCase):
                 package["repository"],
                 {"https://github.com/lere01/qslib", "https://github.com/lere01/qslib.git"},
             )
-            self.assertEqual(package["publish"], [])
+            self.assertIsNone(
+                package["publish"], f"{name} must be publishable to crates.io"
+            )
+        for name in ("qslib-quantum-python", "qslib-test-support"):
+            self.assertEqual(
+                packages[name]["publish"],
+                [],
+                f"{name} must stay excluded from registry publication",
+            )
 
     def test_python_distribution_has_installable_project_metadata(self) -> None:
         metadata = tomllib.loads(

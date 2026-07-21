@@ -24,13 +24,30 @@ fn workspace_metadata_matches_the_accepted_package_and_target_map() {
     let expected: BTreeSet<_> = EXPECTED_PACKAGES.into_iter().collect();
     assert_eq!(actual, expected);
 
-    for package in packages.values() {
+    // Registry publication is allowed for the facade and capability crates.
+    // The Python binding ships through PyPI and test support stays private.
+    let registry_excluded: BTreeSet<&str> = ["qslib-quantum-python", "qslib-test-support"]
+        .into_iter()
+        .collect();
+    for (name, package) in &packages {
         assert_eq!(package["version"], "0.1.0");
         assert_eq!(package["edition"], "2024");
         assert_eq!(package["rust_version"], "1.85");
         assert_eq!(package["license"], "Apache-2.0");
         assert_eq!(package["repository"], "https://github.com/lere01/qslib.git");
-        assert_eq!(package["publish"], serde_json::json!([]));
+        if registry_excluded.contains(name) {
+            assert_eq!(
+                package["publish"],
+                serde_json::json!([]),
+                "{name} must stay excluded from registry publication"
+            );
+        } else {
+            assert_eq!(
+                package["publish"],
+                Value::Null,
+                "{name} must be publishable to crates.io"
+            );
+        }
     }
 
     assert_target(packages["qslib-quantum"], "qslib", "lib");
