@@ -189,6 +189,7 @@ jobs:
             echo "the CARGO_REGISTRY_TOKEN repository secret is not configured" >&2
             exit 1
           fi
+          version="$(cargo +stable metadata --locked --no-deps --format-version 1 | python3 -c 'import json, sys; packages=json.load(sys.stdin)["packages"]; print(next(p["version"] for p in packages if p["name"] == "qslib-quantum"))')"
           for package in \
             qslib-quantum-core \
             qslib-quantum-exact \
@@ -197,6 +198,11 @@ jobs:
             qslib-quantum-variational \
             qslib-quantum \
             qslib-quantum-cli; do
+            if curl -fsS -A "qslib-release-workflow (github.com/lere01/qslib)" \
+              "https://crates.io/api/v1/crates/$package/$version" > /dev/null 2>&1; then
+              echo "$package $version is already published; skipping"
+              continue
+            fi
             cargo +stable publish --locked -p "$package"
           done
 
