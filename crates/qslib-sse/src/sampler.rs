@@ -15,6 +15,8 @@ pub enum SamplerError {
     InvalidBeta(f64),
     /// Model has no diagonal terms.
     NoDiagonalTerms,
+    /// A TFIM cluster update was requested for an incompatible model.
+    UnsupportedClusterUpdate,
     /// Invalid simulation configuration.
     InvalidConfig(&'static str),
     /// Model/state failure.
@@ -30,6 +32,9 @@ impl std::fmt::Display for SamplerError {
         match self {
             Self::InvalidBeta(value) => write!(f, "beta must be positive and finite, got {value}"),
             Self::NoDiagonalTerms => f.write_str("SSE model has no diagonal terms"),
+            Self::UnsupportedClusterUpdate => {
+                f.write_str("the model does not support the TFIM cluster update")
+            }
             Self::InvalidConfig(name) => write!(f, "invalid sampler configuration: {name}"),
             Self::Model(error) => error.fmt(f),
         }
@@ -57,6 +62,21 @@ pub struct OffDiagonalSweepStats {
     pub proposals: usize,
     /// Pair proposals accepted.
     pub accepted: usize,
+}
+
+/// Structural and acceptance counts from cluster updates.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct ClusterSweepStats {
+    /// Connected components identified by the linked-cluster breakup.
+    pub clusters: usize,
+    /// Components selected for flipping.
+    pub flipped_clusters: usize,
+    /// Diagonal/off-diagonal partner vertices toggled.
+    pub vertices_toggled: usize,
+    /// Cluster proposals attempted.
+    pub proposals: usize,
+    /// Cluster proposals accepted.
+    pub proposals_accepted: usize,
 }
 
 /// Boundary basis-state flip counts from one basis sweep.
@@ -322,6 +342,187 @@ impl<M: SseModel, R: Rng> SseSampler<M, R> {
         }
         Ok(stats)
     }
+    /// Perform the deterministic transverse-field Ising linked-cluster update.
+    ///
+    /// Every vertex is broken up into world-line legs, legs are joined through
+    /// bond vertices and around the imaginary-time boundary, and each connected
+    /// component is flipped with probability one half. Flipping a component
+    /// toggles the transverse `SiteConstant`/`SpinFlip` partner vertices it
+    /// crosses, which is weight-neutral because partners share one matrix
+    /// element. Models must advertise
+    /// [`SseModel::supports_tfim_cluster_update`].
+    pub fn tfim_cluster_sweep(&mut self) -> Result<ClusterSweepStats, SamplerError> {
+        if !self.model.supports_tfim_cluster_update() {
+            return Err(SamplerError::UnsupportedClusterUpdate);
+        }
+        self.cluster_sweep(false)
+    }
+    /// Perform a trace-preserving cluster proposal followed by a Metropolis
+    /// correction for occupation-dependent Rydberg diagonal weights.
+    ///
+    /// This global proposal is retained primarily as a correctness reference;
+    /// its acceptance may be poor for large or strongly interacting systems.
+    pub fn rydberg_global_cluster_sweep(&mut self) -> Result<ClusterSweepStats, SamplerError> {
+        self.cluster_sweep(true)
+    }
+    fn cluster_sweep(
+        &mut self,
+        metropolis_correction: bool,
+    ) -> Result<ClusterSweepStats, SamplerError> {
+        let original = self.state.clone();
+        let original_log_weight = if metropolis_correction {
+            self.state.propagate(&self.model)?.log_weight
+        } else {
+            0.0
+        };
+
+        let num_sites = self.model.num_sites();
+        let mut first_leg = vec![None; num_sites];
+        let mut last_leg = vec![None; num_sites];
+        let mut union_find = UnionFind::default();
+        let mut site_vertices = Vec::new();
+        for (position, operator) in self.state.operator_string().iter().enumerate() {
+            let Some(term_index) = operator.term_index() else {
+                continue;
+            };
+            let term = *self
+                .model
+                .term(term_index)
+                .ok_or(SseModelError::InvalidTermIndex {
+                    term_index,
+                    num_terms: self.model.num_terms(),
+                })?;
+            match term.sites() {
+                (site, None) => {
+                    let incoming = union_find.add();
+                    let outgoing = union_find.add();
+                    link_world_line(
+                        site as usize,
+                        incoming,
+                        outgoing,
+                        &mut first_leg,
+                        &mut last_leg,
+                        &mut union_find,
+                    );
+                    if self.model.transverse_partner(term_index).is_some() {
+                        site_vertices.push(SiteVertex {
+                            position,
+                            term_index,
+                            incoming,
+                            outgoing,
+                        });
+                    } else {
+                        union_find.union(incoming, outgoing);
+                    }
+                }
+                (site_i, Some(site_j)) => {
+                    let i_in = union_find.add();
+                    let i_out = union_find.add();
+                    let j_in = union_find.add();
+                    let j_out = union_find.add();
+                    link_world_line(
+                        site_i as usize,
+                        i_in,
+                        i_out,
+                        &mut first_leg,
+                        &mut last_leg,
+                        &mut union_find,
+                    );
+                    link_world_line(
+                        site_j as usize,
+                        j_in,
+                        j_out,
+                        &mut first_leg,
+                        &mut last_leg,
+                        &mut union_find,
+                    );
+                    union_find.union(i_in, i_out);
+                    union_find.union(i_in, j_in);
+                    union_find.union(i_in, j_out);
+                }
+            }
+        }
+        for site in 0..num_sites {
+            if let (Some(first), Some(last)) = (first_leg[site], last_leg[site]) {
+                union_find.union(first, last);
+            }
+        }
+
+        let mut flip = vec![false; union_find.len()];
+        let mut assigned = vec![false; union_find.len()];
+        let mut stats = ClusterSweepStats::default();
+        for leg in 0..union_find.len() {
+            let root = union_find.find(leg);
+            if !assigned[root] {
+                assigned[root] = true;
+                flip[root] = random_bool(&mut self.rng);
+                stats.clusters += 1;
+                stats.flipped_clusters += usize::from(flip[root]);
+            }
+        }
+        for (site, &first) in first_leg.iter().enumerate() {
+            match first {
+                Some(leg) if flip[union_find.find(leg)] => {
+                    flip_bit(&mut self.state.bits_mut()[site]);
+                }
+                None => {
+                    stats.clusters += 1;
+                    if random_bool(&mut self.rng) {
+                        flip_bit(&mut self.state.bits_mut()[site]);
+                        stats.flipped_clusters += 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+        for vertex in site_vertices {
+            if flip[union_find.find(vertex.incoming)] == flip[union_find.find(vertex.outgoing)] {
+                continue;
+            }
+            let partner = self
+                .model
+                .transverse_partner(vertex.term_index)
+                .ok_or(SamplerError::UnsupportedClusterUpdate)?;
+            self.state.operator_string_mut()[vertex.position] =
+                match self.model.operator_kind(partner as usize)? {
+                    crate::OperatorKind::Diagonal => Operator::diagonal(partner),
+                    crate::OperatorKind::OffDiagonal => Operator::off_diagonal(partner),
+                    crate::OperatorKind::Identity => {
+                        return Err(SamplerError::Model(SseModelError::InvalidOperatorKind));
+                    }
+                };
+            stats.vertices_toggled += 1;
+        }
+
+        stats.proposals = 1;
+        if metropolis_correction {
+            let proposed = match self.state.propagate(&self.model) {
+                Ok(value) => value,
+                Err(SseModelError::NonPositiveMatrixElement { .. }) => {
+                    self.state = original;
+                    stats.flipped_clusters = 0;
+                    stats.vertices_toggled = 0;
+                    return Ok(stats);
+                }
+                Err(error) => return Err(SamplerError::Model(error)),
+            };
+            if !proposed.trace_closed {
+                return Err(SamplerError::Model(SseModelError::TraceNotClosed));
+            }
+            let log_acceptance = proposed.log_weight - original_log_weight;
+            if random_unit(&mut self.rng) < log_acceptance.min(0.0).exp() {
+                stats.proposals_accepted = 1;
+            } else {
+                self.state = original;
+                stats.flipped_clusters = 0;
+                stats.vertices_toggled = 0;
+            }
+        } else {
+            self.state.validate_trace(&self.model)?;
+            stats.proposals_accepted = 1;
+        }
+        Ok(stats)
+    }
     /// Run thermalization and measurement sweeps.
     pub fn run(&mut self, config: SimulationConfig) -> Result<SimulationResults, SamplerError> {
         if config.sweeps_per_measurement == 0 {
@@ -432,6 +633,77 @@ fn add_stats(left: DiagonalSweepStats, right: DiagonalSweepStats) -> DiagonalSwe
 }
 fn random_unit<R: Rng>(rng: &mut R) -> f64 {
     (rng.next_u64() as f64) / (u64::MAX as f64)
+}
+fn random_bool<R: Rng>(rng: &mut R) -> bool {
+    rng.next_u64() & 1 == 1
+}
+fn flip_bit(bit: &mut qslib_core::BasisBit) {
+    *bit = match *bit {
+        qslib_core::BasisBit::Zero => qslib_core::BasisBit::One,
+        qslib_core::BasisBit::One => qslib_core::BasisBit::Zero,
+    };
+}
+
+/// A toggleable transverse vertex recorded during the linked-cluster breakup.
+#[derive(Clone, Copy, Debug)]
+struct SiteVertex {
+    position: usize,
+    term_index: usize,
+    incoming: usize,
+    outgoing: usize,
+}
+
+#[derive(Default)]
+struct UnionFind {
+    parent: Vec<usize>,
+    rank: Vec<u8>,
+}
+impl UnionFind {
+    fn add(&mut self) -> usize {
+        let index = self.parent.len();
+        self.parent.push(index);
+        self.rank.push(0);
+        index
+    }
+    fn len(&self) -> usize {
+        self.parent.len()
+    }
+    fn find(&mut self, index: usize) -> usize {
+        if self.parent[index] != index {
+            self.parent[index] = self.find(self.parent[index]);
+        }
+        self.parent[index]
+    }
+    fn union(&mut self, left: usize, right: usize) {
+        let mut left_root = self.find(left);
+        let mut right_root = self.find(right);
+        if left_root == right_root {
+            return;
+        }
+        if self.rank[left_root] < self.rank[right_root] {
+            std::mem::swap(&mut left_root, &mut right_root);
+        }
+        self.parent[right_root] = left_root;
+        if self.rank[left_root] == self.rank[right_root] {
+            self.rank[left_root] += 1;
+        }
+    }
+}
+
+fn link_world_line(
+    site: usize,
+    incoming: usize,
+    outgoing: usize,
+    first_leg: &mut [Option<usize>],
+    last_leg: &mut [Option<usize>],
+    union_find: &mut UnionFind,
+) {
+    if let Some(previous) = last_leg[site] {
+        union_find.union(previous, incoming);
+    } else {
+        first_leg[site] = Some(incoming);
+    }
+    last_leg[site] = Some(outgoing);
 }
 fn add_off_stats(
     left: OffDiagonalSweepStats,

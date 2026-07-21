@@ -4,9 +4,9 @@ use qslib_core::{
 };
 use qslib_sse::{
     BasisSseState, LegacyModelKind, LegacySpin, LocalSseModel, Operator, OperatorKind,
-    SimulationConfig, SimulationResults, SseModel, SseModelError, SseSampler, SseTerm,
-    ThermodynamicAccumulator, convert_legacy_bits, derive_chain_seed, derive_legacy_chain_seed,
-    logical_chain_seeds, run_parallel_chains,
+    SamplerError, SimulationConfig, SimulationResults, SseModel, SseModelError, SseSampler,
+    SseTerm, ThermodynamicAccumulator, convert_legacy_bits, derive_chain_seed,
+    derive_legacy_chain_seed, logical_chain_seeds, run_parallel_chains,
 };
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng;
@@ -625,4 +625,172 @@ fn measurement_phase_rejects_an_exhausted_cutoff_instead_of_mixing_ensembles() {
         error,
         qslib_sse::SamplerError::InvalidConfig("operator_string_cutoff")
     ));
+}
+
+#[test]
+fn tfim_cluster_sweep_preserves_trace_and_toggles_transverse_vertices() {
+    let model = LocalSseModel::tfim(4, &[(0, 1), (1, 2), (2, 3), (0, 3)], 1.0, 0.8).unwrap();
+    let state =
+        BasisSseState::new(vec![BasisBit::Zero; 4], vec![Operator::identity(); 64]).unwrap();
+    let mut sampler = SseSampler::new(
+        model,
+        state,
+        3.0,
+        ChaCha20Rng::from_seed(derive_chain_seed(19, 0)),
+    )
+    .unwrap();
+    let mut toggles = 0;
+    for _ in 0..200 {
+        sampler.ensure_operator_headroom();
+        sampler.diagonal_sweep().unwrap();
+        toggles += sampler.tfim_cluster_sweep().unwrap().vertices_toggled;
+        sampler.state().validate_trace(sampler.model()).unwrap();
+    }
+    assert!(toggles > 0);
+    assert!(
+        sampler
+            .state()
+            .operator_string()
+            .iter()
+            .any(|operator| operator.kind() == OperatorKind::OffDiagonal)
+    );
+}
+
+#[test]
+fn rydberg_models_reject_the_tfim_cluster_update() {
+    let model = LocalSseModel::rydberg(2, &[0.5, 0.5], &[(0, 1, 1.0)], 1.0).unwrap();
+    let state =
+        BasisSseState::new(vec![BasisBit::Zero; 2], vec![Operator::identity(); 16]).unwrap();
+    let mut sampler = SseSampler::new(
+        model,
+        state,
+        1.0,
+        ChaCha20Rng::from_seed(derive_chain_seed(2, 0)),
+    )
+    .unwrap();
+    assert!(matches!(
+        sampler.tfim_cluster_sweep(),
+        Err(SamplerError::UnsupportedClusterUpdate)
+    ));
+}
+
+#[test]
+fn one_site_tfim_cluster_updates_match_exact_thermal_energy() {
+    let beta: f64 = 2.0;
+    let field = 1.0;
+    let model = LocalSseModel::tfim(1, &[], 0.0, field).unwrap();
+    let state = BasisSseState::new(vec![BasisBit::Zero], vec![Operator::identity(); 32]).unwrap();
+    let mut sampler = SseSampler::new(
+        model,
+        state,
+        beta,
+        ChaCha20Rng::from_seed(derive_chain_seed(1_234, 0)),
+    )
+    .unwrap();
+    for _ in 0..2_000 {
+        sampler.ensure_operator_headroom();
+        sampler.diagonal_sweep().unwrap();
+        sampler.tfim_cluster_sweep().unwrap();
+    }
+    let mut accumulator = ThermodynamicAccumulator::default();
+    for _ in 0..30_000 {
+        sampler.ensure_operator_headroom();
+        sampler.diagonal_sweep().unwrap();
+        sampler.tfim_cluster_sweep().unwrap();
+        accumulator.record(sampler.state().expansion_order());
+    }
+    let results = accumulator
+        .results(beta, sampler.model().energy_shift(), 1)
+        .unwrap();
+    let exact = -field * (beta * field).tanh();
+    assert!((results.energy - exact).abs() < 0.03);
+}
+
+#[test]
+fn rydberg_global_cluster_sweep_preserves_trace_and_accepts_proposals() {
+    let model = LocalSseModel::rydberg(
+        4,
+        &[1.0; 4],
+        &[(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0), (0, 3, 1.0)],
+        1.0,
+    )
+    .unwrap();
+    let state =
+        BasisSseState::new(vec![BasisBit::Zero; 4], vec![Operator::identity(); 128]).unwrap();
+    let mut sampler = SseSampler::new(
+        model,
+        state,
+        2.0,
+        ChaCha20Rng::from_seed(derive_chain_seed(24_301, 0)),
+    )
+    .unwrap();
+    let mut accepted = 0;
+    for _ in 0..500 {
+        sampler.ensure_operator_headroom();
+        sampler.diagonal_sweep().unwrap();
+        accepted += sampler
+            .rydberg_global_cluster_sweep()
+            .unwrap()
+            .proposals_accepted;
+        sampler.state().validate_trace(sampler.model()).unwrap();
+    }
+    assert!(accepted > 0);
+}
+
+#[test]
+fn one_site_rydberg_global_reference_matches_exact_thermal_energy() {
+    let beta: f64 = 1.1;
+    let omega: f64 = 0.8;
+    let detuning: f64 = 0.9;
+    let discriminant = (detuning * detuning + omega * omega).sqrt();
+    let levels = [
+        (-detuning - discriminant) / 2.0,
+        (-detuning + discriminant) / 2.0,
+    ];
+    let boltzmann = levels.map(|level| (-beta * level).exp());
+    let exact =
+        (levels[0] * boltzmann[0] + levels[1] * boltzmann[1]) / (boltzmann[0] + boltzmann[1]);
+
+    let chain_count = 8_usize;
+    let mut energies = Vec::with_capacity(chain_count);
+    for chain_index in 0..chain_count {
+        let model = LocalSseModel::rydberg(1, &[detuning], &[], omega).unwrap();
+        let state =
+            BasisSseState::new(vec![BasisBit::Zero], vec![Operator::identity(); 64]).unwrap();
+        let mut sampler = SseSampler::new(
+            model,
+            state,
+            beta,
+            ChaCha20Rng::from_seed(derive_chain_seed(9_001, chain_index as u64)),
+        )
+        .unwrap();
+        for _ in 0..500 {
+            sampler.ensure_operator_headroom();
+            sampler.diagonal_sweep().unwrap();
+            sampler.rydberg_global_cluster_sweep().unwrap();
+        }
+        let mut accumulator = ThermodynamicAccumulator::default();
+        for _ in 0..4_000 {
+            sampler.ensure_operator_headroom();
+            sampler.diagonal_sweep().unwrap();
+            sampler.rydberg_global_cluster_sweep().unwrap();
+            accumulator.record(sampler.state().expansion_order());
+        }
+        let results = accumulator
+            .results(beta, sampler.model().energy_shift(), 1)
+            .unwrap();
+        energies.push(results.energy);
+    }
+    let count = energies.len() as f64;
+    let mean = energies.iter().sum::<f64>() / count;
+    let variance = energies
+        .iter()
+        .map(|energy| (energy - mean).powi(2))
+        .sum::<f64>()
+        / (count - 1.0);
+    let standard_error = (variance / count).sqrt();
+    assert!(
+        (mean - exact).abs() < 3.0 * standard_error,
+        "mean {mean} exact {exact} standard error {standard_error}"
+    );
 }

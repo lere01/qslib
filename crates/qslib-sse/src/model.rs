@@ -178,6 +178,20 @@ pub trait SseModel {
     fn term(&self, index: usize) -> Option<&SseTerm>;
     /// Diagonal term indices.
     fn diagonal_term_indices(&self) -> &[u32];
+    /// Whether every vertex supports the deterministic transverse-field Ising
+    /// linked-cluster breakup implemented by the sampler.
+    ///
+    /// The default is conservative: models that do not opt in are rejected by
+    /// the cluster update rather than sampled incorrectly.
+    fn supports_tfim_cluster_update(&self) -> bool {
+        false
+    }
+    /// Matching diagonal/off-diagonal single-site partner vertex, when one
+    /// exists with an identical matrix element on the same site.
+    fn transverse_partner(&self, index: usize) -> Option<u32> {
+        let _ = index;
+        None
+    }
     /// Required kind for a term.
     fn operator_kind(&self, index: usize) -> Result<OperatorKind, SseModelError>;
     /// Evaluate a term on a canonical bit state.
@@ -192,6 +206,8 @@ pub struct LocalSseModel {
     num_sites: usize,
     terms: Vec<SseTerm>,
     diagonal: Vec<u32>,
+    transverse_partners: Vec<Option<u32>>,
+    cluster_capable: bool,
     shift: f64,
 }
 impl LocalSseModel {
@@ -366,10 +382,21 @@ impl LocalSseModel {
                 (term.operator_kind() == OperatorKind::Diagonal).then_some(index as u32)
             })
             .collect();
+        let transverse_partners = compute_transverse_partners(&terms);
+        let cluster_capable = terms
+            .iter()
+            .zip(&transverse_partners)
+            .all(|(term, partner)| match term {
+                SseTerm::TfimBond { .. } => true,
+                SseTerm::SiteConstant { .. } | SseTerm::SpinFlip { .. } => partner.is_some(),
+                SseTerm::RydbergDetuning { .. } | SseTerm::RydbergInteraction { .. } => false,
+            });
         Ok(Self {
             num_sites,
             terms,
             diagonal,
+            transverse_partners,
+            cluster_capable,
             shift,
         })
     }
@@ -402,6 +429,29 @@ impl LocalSseModel {
                 num_sites: self.num_sites,
             })
     }
+}
+fn compute_transverse_partners(terms: &[SseTerm]) -> Vec<Option<u32>> {
+    let single_site = |term: &SseTerm| match *term {
+        SseTerm::SiteConstant { site, amplitude } => {
+            Some((site, amplitude, OperatorKind::Diagonal))
+        }
+        SseTerm::SpinFlip { site, amplitude } => Some((site, amplitude, OperatorKind::OffDiagonal)),
+        _ => None,
+    };
+    let mut partners = vec![None; terms.len()];
+    for (left_index, left) in terms.iter().enumerate() {
+        let Some((left_site, left_amplitude, left_kind)) = single_site(left) else {
+            continue;
+        };
+        partners[left_index] = terms.iter().enumerate().find_map(|(right_index, right)| {
+            let (right_site, right_amplitude, right_kind) = single_site(right)?;
+            (left_site == right_site
+                && left_amplitude == right_amplitude
+                && left_kind != right_kind)
+                .then_some(right_index as u32)
+        });
+    }
+    partners
 }
 fn nonnegative(name: &'static str, value: f64) -> Result<(), SseModelError> {
     if !value.is_finite() || value < 0.0 {
@@ -441,6 +491,12 @@ impl SseModel for LocalSseModel {
     }
     fn diagonal_term_indices(&self) -> &[u32] {
         &self.diagonal
+    }
+    fn supports_tfim_cluster_update(&self) -> bool {
+        self.cluster_capable
+    }
+    fn transverse_partner(&self, index: usize) -> Option<u32> {
+        self.transverse_partners.get(index).copied().flatten()
     }
     fn operator_kind(&self, index: usize) -> Result<OperatorKind, SseModelError> {
         self.terms
