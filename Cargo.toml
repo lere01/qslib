@@ -9,7 +9,7 @@ readme = "README.md"
 repository = "https://github.com/lere01/qslib.git"
 homepage = "https://github.com/lere01/qslib"
 documentation = "https://docs.rs/qslib-quantum"
-publish = false
+publish = true
 keywords = ["quantum", "physics", "simulation", "lattice", "monte-carlo"]
 categories = ["science", "simulation"]
 
@@ -45,7 +45,7 @@ rust-version = "1.85"
 license = "Apache-2.0"
 repository = "https://github.com/lere01/qslib.git"
 homepage = "https://github.com/lere01/qslib"
-publish = false
+publish = true
 
 [workspace.dependencies]
 blake3 = "1.8.5"

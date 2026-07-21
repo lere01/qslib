@@ -1,5 +1,11 @@
 # qslib
 
+[![CI](https://github.com/lere01/qslib/actions/workflows/ci.yml/badge.svg)](https://github.com/lere01/qslib/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/qslib-quantum.svg)](https://crates.io/crates/qslib-quantum)
+[![PyPI](https://img.shields.io/pypi/v/qslib-quantum.svg)](https://pypi.org/project/qslib-quantum/)
+[![Documentation](https://img.shields.io/badge/docs-lere01.github.io%2Fqslib-blue.svg)](https://lere01.github.io/qslib/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 `qslib` is a quantum simulation library written in Rust. It is intended to
 provide shared scientific definitions and numerical building blocks for exact
 diagonalization, variational Monte Carlo, TDVP, stochastic series expansion,
@@ -18,7 +24,9 @@ The qslib 1.0 release criteria are recorded in the project's internal
 execution plan; the public documentation describes the supported behavior and
 quality guarantees.
 The [documentation index](docs/index.md) collects the physicist-first guides
-and the locally generated Rust API reference entry point.
+and the locally generated Rust API reference entry point. The same combined
+guide book and Rust API reference are published at
+[lere01.github.io/qslib](https://lere01.github.io/qslib/).
 
 The current Cargo workspace exposes the `qslib` facade, while capability crates
 isolate core, exact, variational, SSE, IO, CLI, Python, and test-support
@@ -44,9 +52,9 @@ comparison policy, and a checksummed manifest. Passing the current harness
 means the evidence is internally valid. It does not claim that scientific
 algorithms have already been implemented.
 
-The local CI contract is defined in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml). Remote workflow
-execution remains pending owner-authorized push activity.
+The CI contract is defined in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) and runs on hosted
+Linux, macOS, and Windows runners.
 
 For a physicist-first introduction to site order, boundaries, pair-dependent
 couplings, and disorder provenance, see the
@@ -60,13 +68,14 @@ For command-line configuration and physically labelled output, see the
 
 ## Third-party installation
 
-The distribution contract is prepared under the collision-safe name
-`qslib-quantum`. Once an owner-authorized release is published, Rust users will
-install it with `cargo add qslib-quantum --features exact`, Python users with
-`python -m pip install qslib-quantum`, and command-line users will download the
-platform archive containing `qslib`. Rust imports remain `qslib`, and Python
-imports remain `qslib_quantum`. See the [installation guide](docs/installation.md)
-for version pinning, checksums, and the prepublication Git dependency path.
+The distribution contract uses the collision-safe name `qslib-quantum`. Rust
+users install it with `cargo add qslib-quantum --features exact`, Python users
+with `python -m pip install qslib-quantum`, and command-line users download
+the platform archive containing `qslib` from the
+[releases page](https://github.com/lere01/qslib/releases). Rust imports remain
+`qslib`, and Python imports remain `qslib_quantum`. See the
+[installation guide](docs/installation.md) for version pinning, checksums, and
+the Git dependency path.
 
 ## Project policies
 
