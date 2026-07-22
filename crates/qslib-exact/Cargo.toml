@@ -8,9 +8,10 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 publish.workspace = true
+readme = "README.md"
 
 [lib]
 name = "qslib_exact"
 
 [dependencies]
-qslib-core = { package = "qslib-quantum-core", version = "0.1.0", path = "../qslib-core" }
+qslib-core = { package = "qslib-quantum-core", version = "0.2.0", path = "../qslib-core" }

@@ -28,7 +28,7 @@ Rust fallback:
 
 ```toml
 [dependencies]
-qslib-quantum = { git = "https://github.com/lere01/qslib", tag = "v0.1.0", features = ["exact"] }
+qslib-quantum = { git = "https://github.com/lere01/qslib", tag = "v0.2.0", features = ["exact"] }
 ```
 
 Use the source-checkout and local-wheel instructions below when the referenced

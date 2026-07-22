@@ -21,19 +21,32 @@ canonical occupation convention.
 trace closure. The sampler performs three explicit Metropolis update families:
 diagonal insertion/removal, paired off-diagonal vertices, and boundary basis
 state flips. The latter is required for ergodic trace sampling and is model
-agnostic because it operates on canonical `BasisBit` values. Two cluster
-updates complement them. `tfim_cluster_sweep` is the deterministic
+agnostic because it operates on canonical `BasisBit` values. Three ported
+update kernels complement them. `tfim_cluster_sweep` is the deterministic
 transverse-field Ising linked-cluster update: world-line legs are joined
 through bond vertices and around the imaginary-time boundary, each connected
 component flips with probability one half, and flipping toggles the
 weight-neutral `SiteConstant`/`SpinFlip` partner vertices, which decorrelates
 low-temperature and near-critical TFIM chains far faster than local moves.
 Models must advertise `supports_tfim_cluster_update`; occupation-dependent
-Rydberg decompositions are rejected. `rydberg_global_cluster_sweep` reuses the
-same breakup as a global proposal with a Metropolis correction on the full
-path weight. It is retained as a correctness reference for validating local
+Rydberg decompositions are rejected. `rydberg_local_sweep` is the production
+Rydberg family: per site, either two randomly selected transverse partner
+vertices are toggled on that site's world line or the site's imaginary-time
+boundary bit is flipped, and the move is accepted through a Metropolis test
+on the full propagated path weight. `rydberg_global_cluster_sweep` reuses the
+linked-cluster breakup as a global proposal with the same Metropolis
+correction. It is retained as a correctness reference for validating local
 Rydberg updates; its acceptance may be poor for large or strongly interacting
-systems. Operator strings
+systems.
+
+Runs select one family per sweep through `UpdateScheme`
+(`Local`, `TfimCluster`, `RydbergLocal`, `RydbergGlobalReference`), passed to
+`run_with`, `run_recorded`, `run_parallel_chains_with`, or
+`run_parallel_chains_recorded`; `run` and `run_parallel_chains` remain the
+local-scheme defaults with unchanged streams. The recorded variants retain
+the per-measurement expansion-order series required by downstream artifact
+and autocorrelation pipelines, and every result reports cluster and
+world-line statistics alongside the local update counts. Operator strings
 grow geometrically when their identity headroom is low, preserving all existing
 vertices. Thermodynamic estimators use expansion-order moments.
 The result also reports a naive independent-sample energy standard error;

@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 publish.workspace = true
+readme = "README.md"
 
 [lib]
 name = "qslib_core"

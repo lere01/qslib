@@ -30,7 +30,7 @@ fn workspace_metadata_matches_the_accepted_package_and_target_map() {
         .into_iter()
         .collect();
     for (name, package) in &packages {
-        assert_eq!(package["version"], "0.1.0");
+        assert_eq!(package["version"], "0.2.0");
         assert_eq!(package["edition"], "2024");
         assert_eq!(package["rust_version"], "1.85");
         assert_eq!(package["license"], "Apache-2.0");
@@ -46,6 +46,27 @@ fn workspace_metadata_matches_the_accepted_package_and_target_map() {
                 package["publish"],
                 Value::Null,
                 "{name} must be publishable to crates.io"
+            );
+        }
+        // Every crate page must carry its own role-scoped README. The Python
+        // binding ships its PyPI readme through pyproject.toml instead.
+        let manifest_dir = Path::new(package["manifest_path"].as_str().expect("manifest path"))
+            .parent()
+            .expect("manifest directory")
+            .to_path_buf();
+        if *name == "qslib-quantum-python" {
+            assert!(
+                manifest_dir.join("PYTHON_README.md").is_file(),
+                "{name} must keep its PyPI readme"
+            );
+        } else {
+            assert_eq!(
+                package["readme"], "README.md",
+                "{name} must declare a crate README"
+            );
+            assert!(
+                manifest_dir.join("README.md").is_file(),
+                "{name} must have a README.md next to its manifest"
             );
         }
     }
@@ -158,8 +179,8 @@ fn facade_features_are_additive_and_core_only_is_lightweight() {
         .expect("run cargo tree");
     assert!(output.status.success(), "cargo tree failed");
     let tree = String::from_utf8(output.stdout).expect("cargo tree UTF-8");
-    assert!(tree.contains("qslib-quantum v0.1.0"));
-    assert!(tree.contains("qslib-quantum-core v0.1.0"));
+    assert!(tree.contains("qslib-quantum v0.2.0"));
+    assert!(tree.contains("qslib-quantum-core v0.2.0"));
     for forbidden in [
         "qslib-quantum-exact",
         "qslib-quantum-io",

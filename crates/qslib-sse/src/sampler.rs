@@ -108,6 +108,30 @@ impl Default for SimulationConfig {
     }
 }
 
+/// Update family applied once per sweep by [`SseSampler::run_with`].
+///
+/// Every family begins with diagonal insertion/removal, which is the only
+/// update that changes the expansion order.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum UpdateScheme {
+    /// Boundary basis flips, diagonal insertion/removal, and paired
+    /// off-diagonal vertices. Model agnostic; the [`SseSampler::run`]
+    /// default.
+    #[default]
+    Local,
+    /// Diagonal insertion/removal followed by the deterministic
+    /// transverse-field Ising linked-cluster update. The model must
+    /// advertise [`SseModel::supports_tfim_cluster_update`].
+    TfimCluster,
+    /// Diagonal insertion/removal followed by site-local Rydberg world-line
+    /// Metropolis moves. The production family for occupation-dependent
+    /// diagonal weights.
+    RydbergLocal,
+    /// Diagonal insertion/removal followed by the Metropolis-corrected
+    /// global cluster proposal retained as a correctness reference.
+    RydbergGlobalReference,
+}
+
 /// Aggregate result from one sampled chain.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SimulationResults {
@@ -119,6 +143,30 @@ pub struct SimulationResults {
     pub off_diagonal: OffDiagonalSweepStats,
     /// Aggregate boundary basis-state update statistics.
     pub basis: BasisSweepStats,
+    /// Aggregate cluster and world-line update statistics. Zero for the
+    /// purely local update scheme.
+    pub clusters: ClusterSweepStats,
+}
+
+/// One recorded expansion-order sample from a chain.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MeasurementRecord {
+    /// Zero-based position in the measurement series.
+    pub measurement_index: usize,
+    /// Number of non-identity operators at this measurement.
+    pub expansion_order: usize,
+}
+
+/// Aggregate results together with the underlying expansion-order series.
+///
+/// Recording is separate because callers interested only in aggregate
+/// thermodynamics should not pay the memory cost of retaining every sample.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RecordedSimulationResults {
+    /// Aggregate thermodynamics and update statistics.
+    pub simulation: SimulationResults,
+    /// Expansion-order measurements in sampling order.
+    pub measurements: Vec<MeasurementRecord>,
 }
 
 /// Adaptive-cutoff SSE sampler with sign-safe local updates.
@@ -365,6 +413,87 @@ impl<M: SseModel, R: Rng> SseSampler<M, R> {
     pub fn rydberg_global_cluster_sweep(&mut self) -> Result<ClusterSweepStats, SamplerError> {
         self.cluster_sweep(true)
     }
+    /// Perform site-local world-line Metropolis moves for occupation-dependent
+    /// diagonal weights.
+    ///
+    /// For each site, one move is proposed. A pair move toggles two randomly
+    /// selected transverse `SiteConstant`/`SpinFlip` partner vertices on that
+    /// site's world line; a whole-line move flips the site's imaginary-time
+    /// boundary bit. Both are accepted through a Metropolis test on the full
+    /// propagated path weight. This is the production Rydberg update family;
+    /// validate it against [`SseSampler::rydberg_global_cluster_sweep`].
+    pub fn rydberg_local_sweep(&mut self) -> Result<ClusterSweepStats, SamplerError> {
+        let mut stats = ClusterSweepStats::default();
+        for site in 0..self.model.num_sites() {
+            let transverse_positions: Vec<usize> = self
+                .state
+                .operator_string()
+                .iter()
+                .enumerate()
+                .filter_map(|(position, operator)| {
+                    let term_index = operator.term_index()?;
+                    let term = self.model.term(term_index)?;
+                    let is_site = term.sites() == (site as u32, None);
+                    (is_site && self.model.transverse_partner(term_index).is_some())
+                        .then_some(position)
+                })
+                .collect();
+            stats.proposals += 1;
+            let original_log_weight = self.state.propagate(&self.model)?.log_weight;
+            let original = self.state.clone();
+            let pair_move = transverse_positions.len() >= 2 && random_bool(&mut self.rng);
+            if pair_move {
+                let left = (self.rng.next_u64() as usize) % transverse_positions.len();
+                let mut right = (self.rng.next_u64() as usize) % (transverse_positions.len() - 1);
+                if right >= left {
+                    right += 1;
+                }
+                for index in [left, right] {
+                    let position = transverse_positions[index];
+                    let term_index = self.state.operator_string()[position]
+                        .term_index()
+                        .ok_or(SseModelError::InvalidOperatorKind)?;
+                    let partner = self
+                        .model
+                        .transverse_partner(term_index)
+                        .ok_or(SseModelError::InvalidOperatorKind)?;
+                    self.state.operator_string_mut()[position] = match self
+                        .model
+                        .operator_kind(partner as usize)?
+                    {
+                        crate::OperatorKind::Diagonal => Operator::diagonal(partner),
+                        crate::OperatorKind::OffDiagonal => Operator::off_diagonal(partner),
+                        crate::OperatorKind::Identity => {
+                            return Err(SamplerError::Model(SseModelError::InvalidOperatorKind));
+                        }
+                    };
+                }
+            } else {
+                flip_bit(&mut self.state.bits_mut()[site]);
+            }
+            let proposed = match self.state.propagate(&self.model) {
+                Ok(value) if value.trace_closed => value,
+                Ok(_) => return Err(SamplerError::Model(SseModelError::TraceNotClosed)),
+                Err(SseModelError::NonPositiveMatrixElement { .. }) => {
+                    self.state = original;
+                    continue;
+                }
+                Err(error) => return Err(SamplerError::Model(error)),
+            };
+            let log_acceptance = proposed.log_weight - original_log_weight;
+            if random_unit(&mut self.rng) < log_acceptance.min(0.0).exp() {
+                stats.proposals_accepted += 1;
+                if pair_move {
+                    stats.vertices_toggled += 2;
+                } else {
+                    stats.flipped_clusters += 1;
+                }
+            } else {
+                self.state = original;
+            }
+        }
+        Ok(stats)
+    }
     fn cluster_sweep(
         &mut self,
         metropolis_correction: bool,
@@ -523,50 +652,116 @@ impl<M: SseModel, R: Rng> SseSampler<M, R> {
         }
         Ok(stats)
     }
-    /// Run thermalization and measurement sweeps.
+    /// Run thermalization and measurement sweeps with the local update scheme.
     pub fn run(&mut self, config: SimulationConfig) -> Result<SimulationResults, SamplerError> {
+        self.run_with(config, UpdateScheme::Local)
+    }
+    /// Run thermalization and measurement sweeps with a selected update scheme.
+    pub fn run_with(
+        &mut self,
+        config: SimulationConfig,
+        scheme: UpdateScheme,
+    ) -> Result<SimulationResults, SamplerError> {
+        self.run_inner(config, scheme, false)
+            .map(|recorded| recorded.simulation)
+    }
+    /// Run a selected update scheme and retain the expansion-order series.
+    pub fn run_recorded(
+        &mut self,
+        config: SimulationConfig,
+        scheme: UpdateScheme,
+    ) -> Result<RecordedSimulationResults, SamplerError> {
+        self.run_inner(config, scheme, true)
+    }
+    fn sweep_once(
+        &mut self,
+        scheme: UpdateScheme,
+        tally: &mut SweepTally,
+    ) -> Result<(), SamplerError> {
+        match scheme {
+            UpdateScheme::Local => {
+                tally.basis = add_basis_stats(tally.basis, self.basis_state_sweep()?);
+                tally.diagonal = add_stats(tally.diagonal, self.diagonal_sweep()?);
+                tally.off_diagonal =
+                    add_off_stats(tally.off_diagonal, self.off_diagonal_pair_sweep()?);
+            }
+            UpdateScheme::TfimCluster => {
+                tally.diagonal = add_stats(tally.diagonal, self.diagonal_sweep()?);
+                tally.clusters = add_cluster_stats(tally.clusters, self.tfim_cluster_sweep()?);
+            }
+            UpdateScheme::RydbergLocal => {
+                tally.diagonal = add_stats(tally.diagonal, self.diagonal_sweep()?);
+                tally.clusters = add_cluster_stats(tally.clusters, self.rydberg_local_sweep()?);
+            }
+            UpdateScheme::RydbergGlobalReference => {
+                tally.diagonal = add_stats(tally.diagonal, self.diagonal_sweep()?);
+                tally.clusters =
+                    add_cluster_stats(tally.clusters, self.rydberg_global_cluster_sweep()?);
+            }
+        }
+        Ok(())
+    }
+    fn run_inner(
+        &mut self,
+        config: SimulationConfig,
+        scheme: UpdateScheme,
+        retain_measurements: bool,
+    ) -> Result<RecordedSimulationResults, SamplerError> {
         if config.sweeps_per_measurement == 0 {
             return Err(SamplerError::InvalidConfig("sweeps_per_measurement"));
         }
-        let mut diagonal = DiagonalSweepStats::default();
-        let mut off_diagonal = OffDiagonalSweepStats::default();
-        let mut basis = BasisSweepStats::default();
+        let mut tally = SweepTally::default();
         for _ in 0..config.thermalization_sweeps {
             self.ensure_operator_headroom();
-            basis = add_basis_stats(basis, self.basis_state_sweep()?);
-            let stats = self.diagonal_sweep()?;
-            diagonal = add_stats(diagonal, stats);
-            off_diagonal = add_off_stats(off_diagonal, self.off_diagonal_pair_sweep()?);
+            self.sweep_once(scheme, &mut tally)?;
         }
         let mut accumulator = ThermodynamicAccumulator::default();
+        let mut measurements =
+            retain_measurements.then(|| Vec::with_capacity(config.measurement_sweeps));
         let mut measured = 0;
         while measured < config.measurement_sweeps {
             if self.identity_headroom_low() {
                 return Err(SamplerError::InvalidConfig("operator_string_cutoff"));
             }
             for _ in 0..config.sweeps_per_measurement {
-                basis = add_basis_stats(basis, self.basis_state_sweep()?);
-                let stats = self.diagonal_sweep()?;
-                diagonal = add_stats(diagonal, stats);
-                off_diagonal = add_off_stats(off_diagonal, self.off_diagonal_pair_sweep()?);
+                self.sweep_once(scheme, &mut tally)?;
             }
             accumulator.record(self.state.expansion_order());
+            if let Some(records) = &mut measurements {
+                records.push(MeasurementRecord {
+                    measurement_index: records.len(),
+                    expansion_order: self.state.expansion_order(),
+                });
+            }
             measured += 1;
         }
         let thermodynamics = accumulator
             .results(self.beta, self.model.energy_shift(), self.model.num_sites())
             .ok_or(SamplerError::InvalidConfig("no measurements"))?;
-        Ok(SimulationResults {
-            thermodynamics,
-            diagonal,
-            off_diagonal,
-            basis,
+        Ok(RecordedSimulationResults {
+            simulation: SimulationResults {
+                thermodynamics,
+                diagonal: tally.diagonal,
+                off_diagonal: tally.off_diagonal,
+                basis: tally.basis,
+                clusters: tally.clusters,
+            },
+            measurements: measurements.unwrap_or_default(),
         })
     }
 }
 
+#[derive(Default)]
+struct SweepTally {
+    diagonal: DiagonalSweepStats,
+    off_diagonal: OffDiagonalSweepStats,
+    basis: BasisSweepStats,
+    clusters: ClusterSweepStats,
+}
+
 /// Run independent logical chains with deterministic scheduling-independent
-/// streams. Returned results are sorted by logical chain index.
+/// streams and the local update scheme. Returned results are sorted by
+/// logical chain index.
 pub fn run_parallel_chains<M>(
     model: M,
     state: BasisSseState,
@@ -579,6 +774,84 @@ pub fn run_parallel_chains<M>(
 where
     M: SseModel + Clone + Send + Sync + 'static,
 {
+    run_chains_with(
+        model,
+        state,
+        beta,
+        master_seed,
+        chain_count,
+        worker_count,
+        |sampler| sampler.run(config),
+    )
+}
+
+/// Run independent logical chains with a selected update scheme.
+#[allow(clippy::too_many_arguments)]
+pub fn run_parallel_chains_with<M>(
+    model: M,
+    state: BasisSseState,
+    beta: f64,
+    config: SimulationConfig,
+    scheme: UpdateScheme,
+    master_seed: u64,
+    chain_count: usize,
+    worker_count: usize,
+) -> Result<Vec<SimulationResults>, SamplerError>
+where
+    M: SseModel + Clone + Send + Sync + 'static,
+{
+    run_chains_with(
+        model,
+        state,
+        beta,
+        master_seed,
+        chain_count,
+        worker_count,
+        |sampler| sampler.run_with(config, scheme),
+    )
+}
+
+/// Run independent logical chains with a selected update scheme and retain
+/// each chain's expansion-order series.
+#[allow(clippy::too_many_arguments)]
+pub fn run_parallel_chains_recorded<M>(
+    model: M,
+    state: BasisSseState,
+    beta: f64,
+    config: SimulationConfig,
+    scheme: UpdateScheme,
+    master_seed: u64,
+    chain_count: usize,
+    worker_count: usize,
+) -> Result<Vec<RecordedSimulationResults>, SamplerError>
+where
+    M: SseModel + Clone + Send + Sync + 'static,
+{
+    run_chains_with(
+        model,
+        state,
+        beta,
+        master_seed,
+        chain_count,
+        worker_count,
+        |sampler| sampler.run_recorded(config, scheme),
+    )
+}
+
+fn run_chains_with<M, T, F>(
+    model: M,
+    state: BasisSseState,
+    beta: f64,
+    master_seed: u64,
+    chain_count: usize,
+    worker_count: usize,
+    task: F,
+) -> Result<Vec<T>, SamplerError>
+where
+    M: SseModel + Clone + Send + Sync + 'static,
+    T: Send,
+    F: Fn(&mut SseSampler<M, ChaCha20Rng>) -> Result<T, SamplerError> + Send + Sync,
+{
     if chain_count == 0 {
         return Err(SamplerError::InvalidConfig("chain_count"));
     }
@@ -588,6 +861,7 @@ where
     let workers = worker_count.min(chain_count);
     let model = Arc::new(model);
     let state = Arc::new(state);
+    let task = &task;
     let (sender, receiver) = mpsc::channel();
     std::thread::scope(|scope| {
         for worker in 0..workers {
@@ -605,7 +879,7 @@ where
                             chain_index as u64,
                         )),
                     )
-                    .and_then(|mut sampler| sampler.run(config));
+                    .and_then(|mut sampler| task(&mut sampler));
                     if sender.send((chain_index, result)).is_err() {
                         return;
                     }
@@ -613,7 +887,7 @@ where
             });
         }
         drop(sender);
-        let mut results: Vec<Option<SimulationResults>> = (0..chain_count).map(|_| None).collect();
+        let mut results: Vec<Option<T>> = (0..chain_count).map(|_| None).collect();
         for _ in 0..chain_count {
             let (chain_index, result) = receiver
                 .recv()
@@ -712,6 +986,15 @@ fn add_off_stats(
     OffDiagonalSweepStats {
         proposals: left.proposals + right.proposals,
         accepted: left.accepted + right.accepted,
+    }
+}
+fn add_cluster_stats(left: ClusterSweepStats, right: ClusterSweepStats) -> ClusterSweepStats {
+    ClusterSweepStats {
+        clusters: left.clusters + right.clusters,
+        flipped_clusters: left.flipped_clusters + right.flipped_clusters,
+        vertices_toggled: left.vertices_toggled + right.vertices_toggled,
+        proposals: left.proposals + right.proposals,
+        proposals_accepted: left.proposals_accepted + right.proposals_accepted,
     }
 }
 fn add_basis_stats(left: BasisSweepStats, right: BasisSweepStats) -> BasisSweepStats {

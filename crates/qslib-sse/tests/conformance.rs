@@ -5,8 +5,9 @@ use qslib_core::{
 use qslib_sse::{
     BasisSseState, LegacyModelKind, LegacySpin, LocalSseModel, Operator, OperatorKind,
     SamplerError, SimulationConfig, SimulationResults, SseModel, SseModelError, SseSampler,
-    SseTerm, ThermodynamicAccumulator, convert_legacy_bits, derive_chain_seed,
+    SseTerm, ThermodynamicAccumulator, UpdateScheme, convert_legacy_bits, derive_chain_seed,
     derive_legacy_chain_seed, logical_chain_seeds, run_parallel_chains,
+    run_parallel_chains_recorded, run_parallel_chains_with,
 };
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng;
@@ -793,4 +794,181 @@ fn one_site_rydberg_global_reference_matches_exact_thermal_energy() {
         (mean - exact).abs() < 3.0 * standard_error,
         "mean {mean} exact {exact} standard error {standard_error}"
     );
+}
+
+#[test]
+fn rydberg_local_moves_preserve_trace_and_explore_spin_flips() {
+    let model = LocalSseModel::rydberg(
+        4,
+        &[1.0; 4],
+        &[(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0), (0, 3, 1.0)],
+        1.0,
+    )
+    .unwrap();
+    let state =
+        BasisSseState::new(vec![BasisBit::Zero; 4], vec![Operator::identity(); 128]).unwrap();
+    let mut sampler = SseSampler::new(
+        model,
+        state,
+        4.0,
+        ChaCha20Rng::from_seed(derive_chain_seed(24_301, 1)),
+    )
+    .unwrap();
+    let mut accepted = 0;
+    for _ in 0..1_000 {
+        sampler.ensure_operator_headroom();
+        sampler.diagonal_sweep().unwrap();
+        accepted += sampler.rydberg_local_sweep().unwrap().proposals_accepted;
+        sampler.state().validate_trace(sampler.model()).unwrap();
+    }
+    assert!(accepted > 0);
+    assert!(
+        sampler
+            .state()
+            .operator_string()
+            .iter()
+            .any(|operator| operator.kind() == OperatorKind::OffDiagonal)
+    );
+}
+
+#[test]
+fn one_site_rydberg_local_updates_match_exact_thermal_energy() {
+    let beta: f64 = 1.1;
+    let omega: f64 = 0.8;
+    let detuning: f64 = 0.9;
+    let discriminant = (detuning * detuning + omega * omega).sqrt();
+    let levels = [
+        (-detuning - discriminant) / 2.0,
+        (-detuning + discriminant) / 2.0,
+    ];
+    let boltzmann = levels.map(|level| (-beta * level).exp());
+    let exact =
+        (levels[0] * boltzmann[0] + levels[1] * boltzmann[1]) / (boltzmann[0] + boltzmann[1]);
+    let model = LocalSseModel::rydberg(1, &[detuning], &[], omega).unwrap();
+    let state = BasisSseState::new(vec![BasisBit::Zero], vec![Operator::identity(); 64]).unwrap();
+    let results = run_parallel_chains_with(
+        model,
+        state,
+        beta,
+        SimulationConfig {
+            thermalization_sweeps: 500,
+            measurement_sweeps: 4_000,
+            sweeps_per_measurement: 1,
+        },
+        UpdateScheme::RydbergLocal,
+        9_002,
+        8,
+        3,
+    )
+    .unwrap();
+    let (energy, standard_error) = independent_energy_estimate(&results);
+    assert!(
+        (energy - exact).abs() < 3.0 * standard_error,
+        "energy {energy} exact {exact} standard error {standard_error}"
+    );
+    assert!(results.iter().all(|result| result.clusters.proposals > 0));
+}
+
+#[test]
+fn run_defaults_to_local_scheme_with_zero_cluster_statistics() {
+    let config = SimulationConfig {
+        thermalization_sweeps: 200,
+        measurement_sweeps: 500,
+        sweeps_per_measurement: 1,
+    };
+    let model = LocalSseModel::tfim(4, &[(0, 1), (1, 2), (2, 3), (0, 3)], 1.0, 0.8).unwrap();
+    let state =
+        BasisSseState::new(vec![BasisBit::Zero; 4], vec![Operator::identity(); 64]).unwrap();
+    let seed = derive_chain_seed(7, 0);
+    let mut default_sampler = SseSampler::new(
+        model.clone(),
+        state.clone(),
+        2.0,
+        ChaCha20Rng::from_seed(seed),
+    )
+    .unwrap();
+    let mut scheme_sampler =
+        SseSampler::new(model, state, 2.0, ChaCha20Rng::from_seed(seed)).unwrap();
+    let default_results = default_sampler.run(config).unwrap();
+    let scheme_results = scheme_sampler
+        .run_with(config, UpdateScheme::Local)
+        .unwrap();
+    assert_eq!(default_results, scheme_results);
+    assert_eq!(default_results.clusters, Default::default());
+}
+
+#[test]
+fn recorded_runs_match_aggregates_and_retain_the_series() {
+    let config = SimulationConfig {
+        thermalization_sweeps: 200,
+        measurement_sweeps: 500,
+        sweeps_per_measurement: 1,
+    };
+    let model = LocalSseModel::tfim(4, &[(0, 1), (1, 2), (2, 3), (0, 3)], 1.0, 0.8).unwrap();
+    let state =
+        BasisSseState::new(vec![BasisBit::Zero; 4], vec![Operator::identity(); 64]).unwrap();
+    let seed = derive_chain_seed(11, 0);
+    let mut aggregate_sampler = SseSampler::new(
+        model.clone(),
+        state.clone(),
+        2.0,
+        ChaCha20Rng::from_seed(seed),
+    )
+    .unwrap();
+    let mut recorded_sampler =
+        SseSampler::new(model, state, 2.0, ChaCha20Rng::from_seed(seed)).unwrap();
+    let aggregate = aggregate_sampler
+        .run_with(config, UpdateScheme::TfimCluster)
+        .unwrap();
+    let recorded = recorded_sampler
+        .run_recorded(config, UpdateScheme::TfimCluster)
+        .unwrap();
+    assert_eq!(recorded.simulation, aggregate);
+    assert_eq!(recorded.measurements.len(), config.measurement_sweeps);
+    assert!(aggregate.clusters.proposals > 0);
+    for (index, record) in recorded.measurements.iter().enumerate() {
+        assert_eq!(record.measurement_index, index);
+    }
+    let series_mean = recorded
+        .measurements
+        .iter()
+        .map(|record| record.expansion_order as f64)
+        .sum::<f64>()
+        / recorded.measurements.len() as f64;
+    assert!((series_mean - aggregate.thermodynamics.mean_expansion_order).abs() < 1.0e-9);
+}
+
+#[test]
+fn scheme_chains_are_independent_of_worker_count() {
+    let config = SimulationConfig {
+        thermalization_sweeps: 100,
+        measurement_sweeps: 300,
+        sweeps_per_measurement: 1,
+    };
+    let model = LocalSseModel::tfim(4, &[(0, 1), (1, 2), (2, 3), (0, 3)], 1.0, 0.8).unwrap();
+    let state =
+        BasisSseState::new(vec![BasisBit::Zero; 4], vec![Operator::identity(); 64]).unwrap();
+    let sequential = run_parallel_chains_recorded(
+        model.clone(),
+        state.clone(),
+        2.0,
+        config,
+        UpdateScheme::TfimCluster,
+        13,
+        3,
+        1,
+    )
+    .unwrap();
+    let threaded = run_parallel_chains_recorded(
+        model,
+        state,
+        2.0,
+        config,
+        UpdateScheme::TfimCluster,
+        13,
+        3,
+        3,
+    )
+    .unwrap();
+    assert_eq!(sequential, threaded);
 }

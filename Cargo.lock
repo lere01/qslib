@@ -615,7 +615,7 @@ dependencies = [
 
 [[package]]
 name = "qslib-quantum"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "qslib-quantum-core",
  "qslib-quantum-exact",
@@ -626,7 +626,7 @@ dependencies = [
 
 [[package]]
 name = "qslib-quantum-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "qslib-quantum",
  "serde",
@@ -636,7 +636,7 @@ dependencies = [
 
 [[package]]
 name = "qslib-quantum-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "num-complex",
@@ -648,14 +648,14 @@ dependencies = [
 
 [[package]]
 name = "qslib-quantum-exact"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "qslib-quantum-core",
 ]
 
 [[package]]
 name = "qslib-quantum-io"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arrow-array",
  "arrow-schema",
@@ -669,7 +669,7 @@ dependencies = [
 
 [[package]]
 name = "qslib-quantum-python"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "num-complex",
  "numpy",
@@ -679,7 +679,7 @@ dependencies = [
 
 [[package]]
 name = "qslib-quantum-sse"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "qslib-quantum-core",
  "rand_chacha",
@@ -690,7 +690,7 @@ dependencies = [
 
 [[package]]
 name = "qslib-quantum-variational"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "qslib-quantum-core",
@@ -701,7 +701,7 @@ dependencies = [
 
 [[package]]
 name = "qslib-test-support"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "serde",

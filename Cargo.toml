@@ -1,6 +1,6 @@
 [package]
 name = "qslib-quantum"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.85"
 license = "Apache-2.0"
@@ -39,7 +39,7 @@ exclude = ["fuzz"]
 resolver = "3"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.85"
 license = "Apache-2.0"
@@ -68,8 +68,8 @@ io = ["dep:qslib-io"]
 full = ["exact", "variational", "sse", "io"]
 
 [dependencies]
-qslib-core = { package = "qslib-quantum-core", version = "0.1.0", path = "crates/qslib-core" }
-qslib-exact = { package = "qslib-quantum-exact", version = "0.1.0", path = "crates/qslib-exact", optional = true }
-qslib-io = { package = "qslib-quantum-io", version = "0.1.0", path = "crates/qslib-io", optional = true }
-qslib-sse = { package = "qslib-quantum-sse", version = "0.1.0", path = "crates/qslib-sse", optional = true }
-qslib-variational = { package = "qslib-quantum-variational", version = "0.1.0", path = "crates/qslib-variational", optional = true }
+qslib-core = { package = "qslib-quantum-core", version = "0.2.0", path = "crates/qslib-core" }
+qslib-exact = { package = "qslib-quantum-exact", version = "0.2.0", path = "crates/qslib-exact", optional = true }
+qslib-io = { package = "qslib-quantum-io", version = "0.2.0", path = "crates/qslib-io", optional = true }
+qslib-sse = { package = "qslib-quantum-sse", version = "0.2.0", path = "crates/qslib-sse", optional = true }
+qslib-variational = { package = "qslib-quantum-variational", version = "0.2.0", path = "crates/qslib-variational", optional = true }
