@@ -9,7 +9,7 @@ import qslib_quantum as qslib
 
 
 def test_import_contract_and_exception_hierarchy():
-    assert qslib.__version__ == "0.1.0"
+    assert qslib.__version__ == "0.2.0"
     assert issubclass(qslib.InputError, qslib.QslibError)
     assert issubclass(qslib.NumericalError, qslib.QslibError)
 

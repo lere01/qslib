@@ -59,6 +59,22 @@ fn workspace_metadata_matches_the_accepted_package_and_target_map() {
                 manifest_dir.join("PYTHON_README.md").is_file(),
                 "{name} must keep its PyPI readme"
             );
+            // The PyPI distribution and the Python contract test carry their
+            // own version strings; both must track the workspace version so a
+            // release bump cannot fail late in the wheel smoke test.
+            let version = package["version"].as_str().expect("package version");
+            let pyproject = std::fs::read_to_string(manifest_dir.join("pyproject.toml"))
+                .expect("read pyproject.toml");
+            assert!(
+                pyproject.contains(&format!("version = \"{version}\"")),
+                "{name} pyproject.toml must declare version {version}"
+            );
+            let contract = std::fs::read_to_string(manifest_dir.join("tests/python_contract.py"))
+                .expect("read python contract test");
+            assert!(
+                contract.contains(&format!("qslib.__version__ == \"{version}\"")),
+                "{name} contract test must pin __version__ {version}"
+            );
         } else {
             assert_eq!(
                 package["readme"], "README.md",
