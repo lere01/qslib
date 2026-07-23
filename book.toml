@@ -1,5 +1,5 @@
 [book]
-title = "qslib: quantum simulation for physicists"
+title = "qslib — quantum simulation for physicists"
 authors = ["qslib contributors"]
 language = "en"
 src = "docs"
@@ -7,3 +7,13 @@ src = "docs"
 [output.html]
 site-url = "/qslib/"
 git-repository-url = "https://github.com/lere01/qslib"
+preferred-dark-theme = "navy"
+# House design system (github.com/lere01/design); tools/build_docs_site.py
+# fetches the pinned tag into design/ before building.
+additional-css = [
+    "design/tokens/tokens.css",
+    "design/fonts/fonts.css",
+    "design/partials/nav.css",
+    "design/adapters/mdbook/qs-theme.css",
+]
+additional-js = ["design/partials/nav.js"]

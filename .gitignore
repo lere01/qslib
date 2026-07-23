@@ -46,3 +46,6 @@ __pycache__/
 *.pyc
 CHANGELOG.md
 RELEASE_NOTES.md
+
+# House design system - fetched at a pinned tag by tools/build_docs_site.py
+/design/

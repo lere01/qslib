@@ -1,6 +1,7 @@
 """Build the local Markdown book and Rust API reference into one site."""
 
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -8,6 +9,21 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 OWNERSHIP_MARKER = ".qslib-generated-site"
+DESIGN_TAG = "v0.1.0"
+
+
+def ensure_design_system() -> Path:
+    """Fetch the pinned house design system (github.com/lere01/design)."""
+    design = ROOT / "design"
+    if not design.is_dir():
+        subprocess.run(
+            "curl -sSfL https://raw.githubusercontent.com/lere01/design/"
+            f"{DESIGN_TAG}/ci/fetch-design.sh | sh -s -- {DESIGN_TAG} design",
+            cwd=ROOT,
+            shell=True,
+            check=True,
+        )
+    return design
 
 
 def main() -> int:
@@ -29,12 +45,31 @@ def main() -> int:
             )
         shutil.rmtree(destination)
     destination.mkdir(parents=True)
+    design = ensure_design_system()
     subprocess.run(["mdbook", "build", "-d", str(destination)], cwd=ROOT, check=True)
+    # mdBook copies the additional-css files but not the font binaries.
+    fonts = destination / "design" / "fonts"
+    fonts.mkdir(parents=True, exist_ok=True)
+    for woff in (design / "fonts").glob("*.woff2"):
+        shutil.copy2(woff, fonts / woff.name)
     (destination / OWNERSHIP_MARKER).write_text("qslib-docs-v1\n", encoding="utf-8")
+    adapter = design / "adapters" / "rustdoc"
+    env = os.environ.copy()
+    env["RUSTDOCFLAGS"] = " ".join(
+        part
+        for part in (
+            env.get("RUSTDOCFLAGS", ""),
+            f"--html-in-header {adapter / 'header.html'}",
+            f"--html-before-content {adapter / 'before-content.html'}",
+            f"--html-after-content {adapter / 'after-content.html'}",
+        )
+        if part
+    )
     subprocess.run(
         ["cargo", "doc", "--workspace", "--no-deps", "--all-features"],
         cwd=ROOT,
         check=True,
+        env=env,
     )
     api = destination / "api"
     shutil.copytree(ROOT / "target" / "doc", api)
